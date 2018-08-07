@@ -1,0 +1,30 @@
+{
+    "EmailOptions": [
+        "@gmail.com",
+        "@yahoo.com",
+        "@hotmail.com"
+    ],
+    "LineEditKeywords": "music",
+    "OtherOptions": {
+        "MULTI_URL_AMOUNT": 5,
+        "MULTI_URL_OPTION": "MULTI_URL_SELECTED",
+        "USER_AGENT": "Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+        "searchResultsPages": 5
+    },
+    "ProxyServers": [
+    ],
+    "SearchEngineOptions": [
+        "http://bing.com"
+    ],
+    "SocialNetworkOptions": [
+        "site:instagram.com",
+        "site:facebook.com",
+        "site:soundcloud.com",
+        "site:reverbnation.com",
+        "site:myspace.com"
+    ],
+    "TimerOptions": {
+        "HarvesterTimer": 5,
+        "ProxyRotate": 1
+    }
+}
