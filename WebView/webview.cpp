@@ -22,6 +22,7 @@ WebView::~WebView(){
     delete emailListFile;
     delete emailList;
     delete readEmailFile;
+    //connClose();
 }
 
 void WebView::openEmailListFile(QFile * emailListFile){
@@ -81,7 +82,17 @@ void WebView::view1Page(QWebPage *page)
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
+          //  connOpen();
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            if(!mydb.open())
+            {
+                qDebug() << "Error connecting to database";
+                return;
+            }else
+            {
+              qDebug() << "Successfully connected to database";
+            }
             QSqlQuery qry;
             while (i.hasNext()) {
                 QRegularExpressionMatch match = i.next();
@@ -92,10 +103,11 @@ void WebView::view1Page(QWebPage *page)
                     if (!words.value(num).isEmpty())
 
                     {
-                        if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
+                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
                         {
                             qDebug() << "Error inserting emails into database:: " <<
                                         qry.lastError().text();
+
                             return;
                         }else
                         {
@@ -154,7 +166,17 @@ void WebView::view2Page(QWebPage *page)
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
+           // connOpen();
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            if(!mydb.open())
+            {
+                qDebug() << "Error connecting to database";
+                return;
+            }else
+            {
+              qDebug() << "Successfully connected to database";
+            }
             QSqlQuery qry;
             while (i.hasNext()) {
                 QRegularExpressionMatch match = i.next();
@@ -165,7 +187,7 @@ void WebView::view2Page(QWebPage *page)
                     if (!words.value(num).isEmpty())
 
                     {
-                        if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
+                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
                         {
                             qDebug() << "Error inserting emails into database:: " <<
                                         qry.lastError().text();
@@ -227,7 +249,17 @@ void WebView::view3Page(QWebPage *page){
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
+           // connOpen();
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            if(!mydb.open())
+            {
+                qDebug() << "Error connecting to database";
+                return;
+            }else
+            {
+              qDebug() << "Successfully connected to database";
+            }
             QSqlQuery qry;
             while (i.hasNext()) {
                 QRegularExpressionMatch match = i.next();
@@ -238,7 +270,7 @@ void WebView::view3Page(QWebPage *page){
                     if (!words.value(num).isEmpty())
 
                     {
-                        if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
+                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
                         {
                             qDebug() << "Error inserting emails into database:: " <<
                                         qry.lastError().text();
@@ -299,8 +331,19 @@ void WebView::view4Page(QWebPage *page){
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
+            //connOpen();
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            if(!mydb.open())
+            {
+                qDebug() << "Error connecting to database";
+                return;
+            }else
+            {
+              qDebug() << "Successfully connected to database";
+            }
             QSqlQuery qry;
+
             while (i.hasNext()) {
                 QRegularExpressionMatch match = i.next();
                 if (!match.captured(0).isEmpty())
@@ -310,7 +353,7 @@ void WebView::view4Page(QWebPage *page){
                     if (!words.value(num).isEmpty())
 
                     {
-                        if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
+                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
                         {
                             qDebug() << "Error inserting emails into database:: " <<
                                         qry.lastError().text();
@@ -417,7 +460,7 @@ void WebView::insertEmailsJson()
 void WebView::connOpen()
 {
     mydb = QSqlDatabase::addDatabase("QSQLITE");
-    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emails.db");
+    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
     if(!mydb.open())
     {
         qDebug() << "Error connecting to database";

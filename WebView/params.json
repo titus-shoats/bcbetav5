@@ -2,19 +2,23 @@
     "EmailOptions": [
         "@gmail.com",
         "@yahoo.com",
-        "@hotmail.com"
+        "@hotmail.com",
+        "@outlook.com"
     ],
-    "LineEditKeywords": "music",
+    "FILE_LIST_UPLOADED": 1,
+    "LineEditKeywords": "",
     "OtherOptions": {
-        "MULTI_URL_AMOUNT": 5,
-        "MULTI_URL_OPTION": "MULTI_URL_SELECTED",
+        "MULTI_URL_OPTION": "1_URL_SELECTED",
+        "SEARCH_RESULTS_OPTION": 1,
         "USER_AGENT": "Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
-        "searchResultsPages": 5
+        "searchResultsPagesNumber": 22
     },
     "ProxyServers": [
     ],
     "SearchEngineOptions": [
-        "http://bing.com"
+        "http://google.com",
+        "http://bing.com",
+        "http://aol.com"
     ],
     "SocialNetworkOptions": [
         "site:instagram.com",

@@ -71,12 +71,14 @@ MainWindow::~MainWindow()
 
 void MainWindow::receiverLoopWebViewParams(QString searchEngineParam)
 {
+    //QMessageBox::information(this, "...", QString("URLs?? ") + QString( searchEngineParam));
+
     const QUrl url1(searchEngineParam);
     request1->setUrl(url1);
     view1->load(*request1);
     view1->view1Page(view1->page());
-    view1->show();
-    qDebug() << searchEngineParam;
+   // view1->show();
+    //qDebug() << searchEngineParam;
 
 
 
@@ -84,6 +86,8 @@ void MainWindow::receiverLoopWebViewParams(QString searchEngineParam)
 void MainWindow::receiverMultiLoopWebViewParams(QString searchEngineParamMulti1,QString searchEngineParamMulti2,
                                                 QString searchEngineParamMulti3,QString searchEngineParamMulti4)
 {
+   // QMessageBox::information(this, "...", QString("URLs?? ") + QString( searchEngineParamMulti4));
+
 
      qDebug() << "Multi 1 " << searchEngineParamMulti1;
      qDebug() << "Multi 2 "<<  searchEngineParamMulti2;
@@ -113,10 +117,10 @@ void MainWindow::receiverMultiLoopWebViewParams(QString searchEngineParamMulti1,
     view4->view4Page(view4->page());
 
 
-    view1->show();
-    view2->show();
-    view3->show();
-    view4->show();
+   // view1->show();
+   // view2->show();
+   // view3->show();
+  // view4->show();
 }
 
 void MainWindow::getThread(){

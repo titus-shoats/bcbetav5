@@ -79,8 +79,9 @@ public:
     void startHarvest(QVector<QString>vectorSearchEngineOptions,
                     QVector<QString>vectorEmailOptions,QVector<QString>vectorSocialNetworks2,
                       QString lineEdit_keywords_search_box, QList <QString> *proxyServers,
-                      QList<int>timerOptions, QList<QString>otherOptions);
+                      QList<int>timerOptions, QList<QString>otherOptions,int isFileListUploaded);
     void initHarvest();
+    void myLogFile(QString logMessage,int logInt =NULL);
 
 
 private:
@@ -188,6 +189,14 @@ private:
     bool finishReadingMulti2KeywordFile;
     bool finishReadingMulti3KeywordFile;
     bool finishReadingMulti4KeywordFile;
+    QFile *logFile;
+    QTextStream *textStreamLog;
+    QStringList logMessage;
+    bool isMulti1KeywordListComplete;
+    bool isMulti2KeywordListComplete;
+    bool isMulti3KeywordListComplete;
+    bool isMulti4KeywordListComplete;
+
 
 
 

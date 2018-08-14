@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
+#include <QMessageBox>
 
 
 namespace Ui {
