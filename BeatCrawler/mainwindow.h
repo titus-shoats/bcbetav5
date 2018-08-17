@@ -65,7 +65,6 @@ private slots:
 public slots:
     void reEnableStartButton();
     void recieverProxyTableSelection(const QItemSelection &selected, const QItemSelection &deselected);
-    void receiverEmailList(QString emailList);
     void populateEmailTable();
     void deleteEmailsListTable();
     void receiverRemoveEmailList();
@@ -77,6 +76,7 @@ public slots:
     void receiverDisplayCurrentKeyword(QString keyword);
     void receiverEmailCount(int emailCount);
     void receiverEmailTableModel(QSqlQueryModel *queryModel);
+    void receiverLogHarvesterStatus(QString logStatus);
 
 signals:
 
@@ -136,7 +136,6 @@ private:
     bool isMulti_KeywordBox_Bypass_Results_Selected;
 
 
-    QList <QString> *emailList;
     // sets QSet back to list
     // this is because were setting a qlist to qset to remove dups, then from a qset to qlist again
     QList<QString> setEmailList;
@@ -188,7 +187,6 @@ private:
     int logStatusCounterNum;
     bool finishReadingKeywordFile;
     QProcess *webViewProcess;
-    QProcess *serverProcess;
 
     Worker *worker;
     QSqlDatabase mydb;

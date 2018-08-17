@@ -28,10 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
     this->setFixedSize(size);
     setSearchResults();
     webViewProcess = new QProcess(this);
-    serverProcess = new QProcess(this);
 
 
-    emailList = new QList <QString>();
     proxyServers = new QList <QString>();
     emailTableModel = new QStandardItemModel();
     // 67 is the max amount of options that we will have for now
@@ -66,7 +64,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->tableWidget_Proxy->selectionModel(),
             SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this,
             SLOT(recieverProxyTableSelection(const QItemSelection &, const QItemSelection &)));
-   connect(worker,SIGNAL(emitEmailList(QString)),this,SLOT(receiverEmailList(QString)));
    connect( emailTableTimer, SIGNAL(timeout()), this, SLOT(populateEmailTable()));
    connect(this,SIGNAL(emitRemoveEmailList()),this,SLOT(receiverRemoveEmailList()));
    connect(this,SIGNAL(emitSenderEnableDeleteEmailCheckBox()),this,SLOT(receiverEnableDeleteEmailCheckBox()));
@@ -89,6 +86,8 @@ MainWindow::MainWindow(QWidget *parent) :
    connect(this,SIGNAL(emitQueueKeywordListFile(QString)),queueKeywords,SLOT(receiverQueueKeywordListFile(QString)));
 
    connect(worker,SIGNAL(emitEmailTableModel(QSqlQueryModel *)),this,SLOT(receiverEmailTableModel(QSqlQueryModel*)));
+
+   connect(worker,SIGNAL(emitLogHarvesterStatus(QString)),this,SLOT(receiverLogHarvesterStatus(QString)));
 
 
 
@@ -132,6 +131,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lineEdit_Keyword_List_File_Location->setEnabled(false);
 
     createMultiKeywordList();
+    logStatusCounterNum =0;
+    logStatusCounterPtr = &logStatusCounterNum;
 
     nextEmailPagination = 0;
     nextEmailPaginationPtr = &nextEmailPagination;
@@ -162,22 +163,16 @@ MainWindow::~MainWindow()
 {
    delete ui;
    delete options;
-   delete emailList;
    delete proxyServers;
    delete fileList;
-   delete webViewProcess;
    webViewProcess->close();
-   delete serverProcess;
-   serverProcess->close();
+   delete webViewProcess;
 
    delete worker;
    delete  emailTableTimer;
-  //  delete keywordsQueueTableTimer;
    connClose();
    delete queryModel;
    delete qry;
-   delete  emailRowStartPtr;
-   delete  emailRowEndPtr;
    delete queueKeywords;
    delete emailTableModel;
 
@@ -599,7 +594,6 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
        (*emailRowStartPtr) =0;
        (*emailRowEndPtr) =0;
         webViewProcess->close();
-        serverProcess->close();
         emailTableTimer->stop();
          //create a object of value cancel_harvest when we press stop
         obj.insert("StartHarvest",QJsonValue("CANCEL_HARVEST").toString());
@@ -630,15 +624,6 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
         ui->lineEdit_keywords_search_box->setEnabled(true);
         ui->pushButton_Save_Emails->setEnabled(true);
         ui->pushButton_Load_Keyword_List->setEnabled(true);
-        if (emailList->isEmpty()) {
-          //  ui->pushButton_Next_Email_Pagination->setEnabled(false);
-          //  ui->pushButton_Previous_Email_Pagination->setEnabled(false);
-        }
-        else {
-          //  ui->pushButton_Next_Email_Pagination->setEnabled(true);
-          //  ui->pushButton_Previous_Email_Pagination->setEnabled(true);
-        }
-
 
 
         // stops user from pressing start to many times in a row, which will lead to problems
@@ -1455,24 +1440,7 @@ void MainWindow::on_pushButton_Add_Proxy_clicked()
 
 }
 
-void MainWindow:: receiverEmailList(QString emails)
 
-{
-
-   // *emailList << emails;
-    //qDebug() << *emailList;
-   // qDebug() << emails;
-
-  //  ui->tableView_Emails->resizeRowsToContents();
-
-      //*emailList << emails;
-      //qDebug() <<"List" << *emailList;
-      //setEmailList = emailList->toSet().toList();
-       //items found on bottom status bar
-       //ui->label_Items_Found->setText("Items Found: " + QString::number(emailList->size()));
-       //ui->label_Items_Found->setText("Items Found: " +QString("Duplicates: ") + QString::number(emailList->size())
-       //+ QString(" Unique: ")+QString::number(setEmailList.size()));
-}
 
 void MainWindow::on_pushButton_Next_Email_Pagination_clicked()
 {
@@ -1894,4 +1862,27 @@ void MainWindow::on_pushButton_Queue_Keywords_Table_clicked()
     queueKeywords->setModal(true);
     queueKeywords->exec();
 
+}
+
+void MainWindow::receiverLogHarvesterStatus(QString logStatus)
+
+{
+    if(clickedStartStopButton==false)
+    {
+        ui->listWidget_Log_Harvester_Status->clear();
+
+    }
+    if (!logStatus.isEmpty())
+    {
+        QListWidgetItem *listItem = new QListWidgetItem(logStatus, ui->listWidget_Log_Harvester_Status);
+        listItem->setSizeHint(QSize(listItem->sizeHint().width(),20));
+
+        if (*logStatusCounterPtr == 16)
+        {
+            *logStatusCounterPtr = 0;
+            //delete listItem;
+            ui->listWidget_Log_Harvester_Status->clear();
+        }
+        (*logStatusCounterPtr) += 1;
+    }
 }

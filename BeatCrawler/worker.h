@@ -25,7 +25,7 @@ public:
     explicit Worker(QObject *parent =0);
     ~Worker();
     void getCurrentKeywords() ;
-    void openEmailListFile(QFile * emailListFile) const;
+    void openhttpStatusFile(QFile * httpStatusFile) const;
     void openCurrentKeywordJsonFile();
     void connOpen();
     void connClose();
@@ -35,7 +35,7 @@ public:
 
 private:
     bool wStop;
-    QFile *emailListFile;
+    QFile *httpStatusLogFile;
     QTimer *timer;
     QStringList emailList;
     QSqlDatabase mydb;
@@ -63,6 +63,7 @@ signals:
     void emitEmailCount(int emailCount);
     void emitKeywordsQueueTable();
     void emitEmailTableModel(QSqlQueryModel *queryModel);
+    void emitLogHarvesterStatus(QString logStatus);
 
 
 };

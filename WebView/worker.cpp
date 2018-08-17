@@ -53,7 +53,19 @@ Worker::Worker(QObject *parent) :
     multiOptionOneURLString = "";
     multiOptionOneURL = reinterpret_cast<QString *>(&multiOptionOneURLString);
 
+   logFile = new QFile("C:/Users/ace/Documents/QT_Projects/WebView/WebView/.log");
+   if (!logFile->open(QIODevice::WriteOnly))
+   {
+       qDebug() << "unable to open file"<< logFile->errorString();
+       return;
+   }
 
+   httpStatusFile = new QFile("C:/Users/ace/Documents/QT_Projects/WebView/WebView/httpstatus.log");
+   if (!httpStatusFile->open(QIODevice::WriteOnly))
+   {
+       qDebug() << "unable to open file"<< httpStatusFile->errorString();
+       return;
+   }
 
     proxyServers = new QList <QString>();
     fileList = new QStringList();
@@ -73,6 +85,7 @@ Worker::Worker(QObject *parent) :
     searchEnginePaginationCounterNum = 0;
     searchEnginePaginationCounterPtr = &searchEnginePaginationCounterNum;
     deleteKeywordCheckBoxTimer = new QTimer();
+    logMessage = new QStringList();
 
     //connect(&this->myThread, &Thread::emitEmailList, this, &Worker::receiverEmails);
     //connect(&this->myThread1, &Thread1::emitEmailList, this, &Worker::receiverEmails);
@@ -87,14 +100,13 @@ Worker::~Worker()
     delete fileList;
     delete proxyServers;
     delete deleteKeywordCheckBoxTimer;
-    delete multi1CurrentKeywordPtr;
-    delete multi2CurrentKeywordPtr;
-    delete multi3CurrentKeywordPtr;
-    delete multi4CurrentKeywordPtr;
-    delete fileListPtr;
-    delete curlHTTPRequestCounterPtr;
-    delete curlMultiProcessPtrCounter;
-    delete curlSingleProcessPtrCounter;
+
+    delete logMessage;
+    logFile->close();
+    delete logFile;
+
+    httpStatusFile->close();
+    delete httpStatusFile;
 
 }
 
@@ -597,7 +609,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
               //parsedEmails();
               if ( stopHarvestLoop) {
-                  logMessage.prepend("Harvested loop has canceled");
+                  logMessage->prepend("Harvested loop has canceled");
                   ///lineEdit_keywords_search_box.clear();
 
                   curlSingleProcessPtrCounter = &curlSingleProcessCounterNum;
@@ -1581,7 +1593,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
 
 
-              logMessage.prepend(QString("Multi Counter--> ") + QString::number(*curlMultiProcessPtrCounter));
+              logMessage->prepend(QString("Multi Counter--> ") + QString::number(*curlMultiProcessPtrCounter));
 
               /**** If 1_URL_SELECTED is selected/ or if MULTI_URL_SELECTED is selected ,
                and timer is less or equal to search results combox box..
@@ -1594,8 +1606,8 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   //Stop harvest if 1_URL_SELECTED, DEFAULT_SEARCH_RESULT is selected, but no list was uploaded
                   if (multi1KeywordList.isEmpty() && searchResultsOptions == QString::number(DEFAULT_SEARCH_RESULT))
                   {
-                      logMessage.prepend(QString("1_URL_SELECTED, FileList is Empty and Default Search Options is true"));
-                      logMessage.prepend(QString("1_URL_SELECTED, using keywordbox, keyword--> " +currentKeywordSearchBoxKeyword.replace("+"," ")));
+                      logMessage->prepend(QString("1_URL_SELECTED, FileList is Empty and Default Search Options is true"));
+                      logMessage->prepend(QString("1_URL_SELECTED, using keywordbox, keyword--> " +currentKeywordSearchBoxKeyword.replace("+"," ")));
                       *curlSingleProcessPtrCounter = 0;
                       stopHarvestLoop = true;
                       emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
@@ -1615,8 +1627,8 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   //Stop harvest if 1_URL_SELECTED, DEFAULT_SEARCH_RESULT is selected,  but list was uploaded
                   if (!multi1KeywordList.isEmpty() && searchResultsOptions == QString::number(DEFAULT_SEARCH_RESULT))
                   {
-                      logMessage.prepend(QString("1_URL_SELECTED, FileList is Not Empty and Default Search Options is true"));
-                      logMessage.prepend(QString("1_URL_SELECTED, using multi1KeywordList, keyword--> " + QString(multi1KeywordList.value(*multi1CurrentKeywordPtr))));
+                      logMessage->prepend(QString("1_URL_SELECTED, FileList is Not Empty and Default Search Options is true"));
+                      logMessage->prepend(QString("1_URL_SELECTED, using multi1KeywordList, keyword--> " + QString(multi1KeywordList.value(*multi1CurrentKeywordPtr))));
                       *curlSingleProcessPtrCounter = 0;
                       stopHarvestLoop = true;
                       emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
@@ -1639,8 +1651,8 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                    ************/
                   if (!multi1KeywordList.isEmpty() && searchResultsOptions == QString::number(BYPASS_SEARCH_RESULT))
                   {
-                      logMessage.prepend(QString("1_URL_SELECTED , and FileList is true"));
-                      logMessage.prepend(QString("1_URL_SELECTED , and FileList is true,  Filelist size--> ") +
+                      logMessage->prepend(QString("1_URL_SELECTED , and FileList is true"));
+                      logMessage->prepend(QString("1_URL_SELECTED , and FileList is true,  Filelist size--> ") +
                                          QString::number(multi1KeywordList.size()));
 
 
@@ -1664,7 +1676,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
                           (*multi1CurrentKeywordPtr) += 1;
                           *curlSingleProcessPtrCounter = 0;
-                          logMessage.prepend(QString("1_URL_SELECTED, next keyword in multi1KeywordList--> "
+                          logMessage->prepend(QString("1_URL_SELECTED, next keyword in multi1KeywordList--> "
                              + QString(multi1KeywordList.value(*multi1CurrentKeywordPtr).replace("+"," "))));
 
                       }
@@ -1681,7 +1693,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                           stopHarvestLoop = true;
                           emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
                           logHarvesterStatus.clear();
-                          logMessage.prepend("1_URL_SELECTED, ALL_LIST_COMPLETED");
+                          logMessage->prepend("1_URL_SELECTED, ALL_LIST_COMPLETED");
                           completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("MULTI_URL_SELECTED_RESULTS_COMPLETED").toString());
 
                           completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
@@ -1754,7 +1766,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
                       if(searchResultsOptions == QString::number(DEFAULT_SEARCH_RESULT))
                       {
-                         logMessage.prepend("Multi  is True");
+                         logMessage->prepend("Multi  is True");
                          *curlMultiProcessPtrCounter = 0;
                           stopHarvestLoop = true;
 
@@ -1781,7 +1793,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                to see if the size matches the total amount of keywords
                              *****/
 
-                            logMessage.prepend("Multi Bypass is True");
+                            logMessage->prepend("Multi Bypass is True");
 
 
                             /***********
@@ -1799,7 +1811,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                 {
                                     (*multi1CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage.prepend(QString("More items, next multi1KeywordList keyword --> " + QString(multi1CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi1KeywordList keyword --> " + QString(multi1CurrentKeyword.replace("+"," "))));
                                 }
                                 // Current value matches the last keyword, no more items
                                 if (multi1KeywordList.value(*multi1CurrentKeywordPtr) == multi1KeywordList.last())
@@ -1812,7 +1824,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     *multi1CurrentKeywordPtr = 0;
                                     emit emitFinishSenderHarvestResults("MULTI COMPLETED");
                                     logHarvesterStatus.clear();
-                                    logMessage.prepend(QString("multi1keywordList harvest complete" ));
+                                    logMessage->prepend(QString("multi1keywordList harvest complete" ));
                                     isMulti1KeywordListComplete =true;
                                 }
                             }
@@ -1826,7 +1838,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                 {
                                     (*multi2CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage.prepend(QString("More items, next multi2KeywordList keyword -->" + QString(multi2CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi2KeywordList keyword -->" + QString(multi2CurrentKeyword.replace("+"," "))));
 
                                 }
 
@@ -1841,7 +1853,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     *multi2CurrentKeywordPtr = 0;
                                     emit emitFinishSenderHarvestResults("MULTI COMPLETED");
                                     logHarvesterStatus.clear();
-                                    logMessage.prepend(QString("multi2keywordList harvest complete" ));
+                                    logMessage->prepend(QString("multi2keywordList harvest complete" ));
                                     isMulti2KeywordListComplete =true;
 
 
@@ -1858,7 +1870,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                 {
                                     (*multi3CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage.prepend(QString("More items, next multi3KeywordList keyword --> " + QString(multi3CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi3KeywordList keyword --> " + QString(multi3CurrentKeyword.replace("+"," "))));
 
 
                                 }
@@ -1874,7 +1886,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                      stopHarvestLoop = true;
                                     emit emitFinishSenderHarvestResults("MULTI COMPLETED");
                                     logHarvesterStatus.clear();
-                                    logMessage.prepend(QString("multi3keywordList harvest complete" ));
+                                    logMessage->prepend(QString("multi3keywordList harvest complete" ));
                                     isMulti3KeywordListComplete =true;
 
 
@@ -1890,7 +1902,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                 {
                                     (*multi4CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage.prepend(QString("More items, next multi4KeywordList keyword --> " + QString(multi4CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi4KeywordList keyword --> " + QString(multi4CurrentKeyword.replace("+"," "))));
 
 
                                 }
@@ -1905,7 +1917,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     *multi4CurrentKeywordPtr = 0;
                                     emit emitFinishSenderHarvestResults("MULTI COMPLETED");
                                     logHarvesterStatus.clear();
-                                    logMessage.prepend(QString("multi4keywordList harvest complete" ));
+                                    logMessage->prepend(QString("multi4keywordList harvest complete" ));
                                     isMulti4KeywordListComplete =true;
 
                                 }
@@ -1917,7 +1929,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                               && isMulti3KeywordListComplete == true && isMulti4KeywordListComplete == true)
                             {
 
-                                logMessage.prepend("ALL_LIST_COMPLETED");
+                                logMessage->prepend("ALL_LIST_COMPLETED");
                                 *curlMultiProcessPtrCounter = 0;
                                 stopHarvestLoop = true;
                                 completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("MULTI_URL_SELECTED_ALL_LIST_COMPLETED_USING_BYPASS_OPTION").toString());
@@ -1947,18 +1959,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
               QTimer::singleShot(9000, &loop, SLOT(quit()));
               loop.exec();
 
-              QFile logFile_("C:/Users/ace/Documents/QT_Projects/WebView/WebView/log.txt");
-              if (!logFile_.open(QIODevice::WriteOnly))
+
+              QTextStream outStream(logFile);
+              for(int i=0; i < logMessage->size(); i++)
               {
-                  qDebug() << "unable to open file"<< logFile_.errorString();
-                  return;
+                  outStream << logMessage->value(i) << "\n";
               }
-              QTextStream outStream(&logFile_);
-              for(int i=0; i < logMessage.size(); i++)
-              {
-                  outStream << logMessage.value(i) << "\n";
-              }
-              logFile_.close();
 
           }// end of for loop
 
@@ -1967,6 +1973,19 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
      //emit finished();
 }
 
+void Worker::receiverWebViewLog(QString webViewLogMessage)
+{
+
+   httpStatusList <<  webViewLogMessage;
+   QTextStream outStream(httpStatusFile);
+   for(int i=0; i < httpStatusList.size(); i++)
+   {
+       outStream <<httpStatusList.value(i) << "\n";
+       httpStatusList.removeAt(i);
+   }
+
+
+}
 
 void Worker::myLogFile(QString logMessage,int logInt)
 {

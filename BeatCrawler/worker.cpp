@@ -2,12 +2,12 @@
 
 Worker::Worker(QObject * parent)
     :QObject (parent),
-      emailListFile(new QFile()),
+     httpStatusLogFile(new QFile()),
       queryModel(new QSqlQueryModel()),
       socket(new QLocalSocket(this))
 
 {
-   openEmailListFile(emailListFile);
+   openhttpStatusFile(httpStatusLogFile);
    wStop = false;
    connOpen();
    in.setDevice(socket);
@@ -21,19 +21,19 @@ Worker::Worker(QObject * parent)
 
 Worker::~Worker()
 {
-   emailListFile->close();
-   delete emailListFile;
+   httpStatusLogFile->close();
+   delete httpStatusLogFile;
    connClose();
    delete queryModel;
    delete socket;
 }
 
-void Worker::openEmailListFile(QFile * emailListFile) const
+void Worker::openhttpStatusFile(QFile * httpStatusFile) const
 {
 
-    emailListFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailList.txt");
-    if(! emailListFile->open(QIODevice::ReadOnly | QIODevice::Text)){
-        qDebug() << "Error opening keyword file in beat crawler worker";
+    httpStatusFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/httpstatus.log");
+    if(! httpStatusFile->open(QIODevice::ReadOnly | QIODevice::Text)){
+        qDebug() << "Error opening keyword httpstatus.log " <<  httpStatusFile->errorString();
         return;
     }
 }
@@ -89,6 +89,7 @@ void Worker::getEmailCount()
 
 void Worker::getCurrentKeywords()
 {
+    QString str;
        wStop = false;
        for(;;)
        {
@@ -100,8 +101,8 @@ void Worker::getCurrentKeywords()
            QEventLoop loop;
            QTimer::singleShot(5000,&loop,SLOT(quit()));
            loop.exec();
-          // QTimer::singleShot(9000,this,SLOT(requestNewModel()));
            openCurrentKeywordJsonFile();
+           emit emitLogHarvesterStatus(httpStatusLogFile->readLine());
 
        }
 }

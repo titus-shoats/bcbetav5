@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets webkitwidgets webkit sql
+QT       += core gui widgets webkitwidgets webkit sql network
 
 TARGET = WebView
 TEMPLATE = app

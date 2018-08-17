@@ -48,7 +48,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <QVector>
 
 
-
 class Worker : public QObject
 {
     Q_OBJECT
@@ -190,14 +189,14 @@ private:
     bool finishReadingMulti3KeywordFile;
     bool finishReadingMulti4KeywordFile;
     QFile *logFile;
+    QFile *httpStatusFile;
     QTextStream *textStreamLog;
-    QStringList logMessage;
+    QStringList *logMessage;
     bool isMulti1KeywordListComplete;
     bool isMulti2KeywordListComplete;
     bool isMulti3KeywordListComplete;
     bool isMulti4KeywordListComplete;
-
-
+    QStringList httpStatusList;
 
 
 signals:
@@ -244,7 +243,7 @@ public slots:
     void receiverRemoveThreadFileList();
     void readEmailFile();
     void receiverRemoveThreadEmailList();
-
+    void receiverWebViewLog(QString logMesssage);
 
 };
 

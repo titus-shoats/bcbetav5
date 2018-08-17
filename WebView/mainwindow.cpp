@@ -45,7 +45,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     worker->initHarvest();
 
-
     //connect(timer,&QTimer::timeout,webview,&WebView::insertEmailsJson);
     //timer->start(5000);
 
