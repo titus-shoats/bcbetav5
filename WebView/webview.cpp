@@ -19,10 +19,13 @@ WebView::WebView(QWidget *parent)
     proxyServerCounterNum =0;
     proxyServerCounterPtr =&proxyServerCounterNum;
 
+
     httpStatusNum = 0;
     httpStatusPtr =&httpStatusNum;
    // connect(&this->worker,&WebView::emitWebViewLog,this,&Worker::receiverWebViewLog);
    connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
+
+   initProxySettings();
 
 }
 
@@ -74,11 +77,8 @@ void WebView::newPageLoading()
     inLoading = true;
     loadingTime.start();
 }
-
-// Rotates proxy with a specified interval, and rotate due to a httpStatus Code
-int WebView::proxyRotater()
+void WebView::initProxySettings()
 {
-
     QList <QString> *proxyServersJson;
     proxyServersJson = new QList<QString>();
     QString val;
@@ -92,195 +92,198 @@ int WebView::proxyRotater()
     QJsonDocument document = QJsonDocument::fromJson(val.toUtf8());
     QJsonObject jsonObject = document.object();
     QJsonValue proxyServers = jsonObject.value(QString("ProxyServers"));
-    QJsonArray proxyServersArray = proxyServers.toArray();
+    proxyServersArray = proxyServers.toArray();
     QJsonValue timerOptions = jsonObject.value(QString("TimerOptions"));
     QJsonObject timerOptionsKey = timerOptions.toObject();
-    bool isProxyEmpty = false;
-    int proxyRotateInterval = timerOptionsKey["ProxyRotate"].toInt();
-    bool canProxyCounterIncrement = false;
-    QString proxies;
-    QStringList proxyServersList;
-    enum defaultApplicationProxy{DEFAULT_PROXY_SETTINGS =0,PROXY_LIST=1};
+    proxyRotateInterval = timerOptionsKey["ProxyRotate"].toInt();
+    QStringList tempList1;
+    QStringList tempList2;
     for(int i =0; i < proxyServersArray.size(); i++ )
     {
 
-        proxyServersList.prepend(proxyServersArray[i].toString());
+        //proxyServersList.prepend(proxyServersArray[i].toString());
     }
 
-    /*******If user insert 4 or more proxies create 4 proxy list******/
-    if(proxyServersArray.size() >= 4)
+    if(!proxyServersArray.isEmpty())
     {
-        /******Create 2 proxy list*****/
-        for(int i=0; i < proxyServersArray.size(); i++)
+        /*******If proxy servers are less than 4, insert proxies into 4 list*****/
+        if(proxyServersArray.size() >4)
         {
-            if(i%2==0)
+            /******Create 2 proxy list*****/
+              for(int i=0; i < proxyServersArray.size(); i++)
+              {
+                  if(i%2==0)
+                  {
+                      tempList1<< proxyServersArray[i].toString();
+                  }else
+                  {
+
+                      tempList2 << proxyServersArray[i].toString();
+
+                  }
+              }
+
+              /******Create 2 more proxy list*****/
+              for(int i=0; i < tempList1.size(); i++)
+              {
+                  if(i%2==0)
+
+                  {
+
+                      proxyList3 << tempList1.value(i);
+                  }else
+                  {
+
+                      proxyList4 << tempList1.value(i);
+
+                  }
+              }
+
+              /******Create 2 more unique proxy list by overwriting proxylist 1 and 2*****/
+              for(int i=0; i < tempList2.size(); i++)
+              {
+                  if(i%2==0)
+
+                  {
+
+
+                      proxyList1 << tempList2.value(i);
+                  }else
+                  {
+
+
+                      proxyList2 << tempList2.value(i);
+
+                  }
+              }
+        }// end if proxy array size is greater than 4
+
+
+        /*******If proxy servers are less than 4, insert proxies into 1 list*****/
+        if(proxyServersArray.size() < 4)
+        {
+            for(int i=0; i < proxyServersArray.size(); i++)
             {
-                proxyList1 << proxyServersArray[i].toString();
-            }else
+                proxyList1 <<  proxyServersArray[i].toString();
+            }
+        }// end if proxy array size is less than 4
+
+
+    }// end if proxyServersArray is not empty
+
+
+
+}
+
+
+// Rotates proxy with a specified interval, and rotate due to a httpStatus Code
+QString WebView::proxyRotater(QStringList proxyServersList)
+{
+
+    bool isProxyEmpty = false;
+    bool canProxyCounterIncrement = false;
+    QString proxies;
+
+    if(!proxyServersArray.isEmpty())
+    {
+
+            if (proxyServersList.isEmpty())
             {
-                proxyList2 << proxyServersArray[i].toString();
+
+                isProxyEmpty = true;
+            }
+
+            if (!proxyServersList.isEmpty())
+            {
+                isProxyEmpty = false;
 
             }
-        }
 
-        /******Create 2 more proxy list*****/
-        for(int i=0; i < proxyList1.size(); i++)
-        {
-            if(i%2==0)
+            // if workerCounter == *proxyRotateIntervalPtr, reset workerCounter; if certain number of
+            // http request have been made rotate proxy
+            if (*workerCounterPtr <= proxyRotateInterval)
             {
-                proxyList3 << proxyList1.value(i);
-            }else
-            {
-                proxyList4 << proxyList1.value(i);
+                // only rotate each proxy if proxyCounterPtr is not greater than our proxyServer qlist
+                if ((*proxyServerCounterPtr) <= proxyServersList.size())
+                {
+                    // if proxy counter is not greater than proxyServer qlist, proxyCounter can increment
+                    canProxyCounterIncrement = true;
+                }
+
+                // if proxy counter is equal to the size of proxyServer qlist, we cant increment
+                if ((*proxyServerCounterPtr) == proxyServersList.size())
+                {
+                    canProxyCounterIncrement = false;
+                    // if proxyServerCounter is equal to the size of the proxyServer qlist, reset it to 0
+                    *proxyServerCounterPtr = 0;
+                }
+
+
+                // if proxies contained in qlist empty in main thread, if so clear the proxylist in this thread also
+                if (isProxyEmpty == true && proxyServersArray.size() == 0)
+                {
+                    //qDebug() << "Proxy Empty";
+                    //qDebug() << *proxyServers;
+                    //qDebug() <<proxyServersArray.size();
+                    proxyServersList.clear();
+                    proxies = "";
+                }
+
+                // if proxies contained in qlist are not empty, and we can keep incrementing,
+                // our proxies are good to use/rotate
+                if (isProxyEmpty == false && canProxyCounterIncrement == true)
+                {
+                    proxies = proxyServersList.value(*proxyServerCounterPtr);
+                    //qDebug() << "Counter-->" << proxies;
+
+                }
+                //qDebug() << "Counter-->" << *proxyServerCounterPtr;
+                //qDebug() << "Proxies-->" << proxies;
 
             }
-        }
-
-        return PROXY_LIST;
-    }// end of if proxyServersArray size is greater or equal to 4
 
 
-   /*******If user inserts less than 4 proxies,roate, and use application wide proxy setting,****/
-   if(proxyServersArray.size() < 4)
-   {
-       if (proxyServersList.isEmpty())
-       {
+            // if workerCounter is greater than *proxyRotateIntervalPtr/ amount of http request before proxy rotates
+            // or if a httpStatusError occured
+            if (*workerCounterPtr >= proxyRotateInterval)
+            {
+                // restart workerCounter
+                *workerCounterPtr = 0;
+                // increment proxyServerPtr to go through each proxyServer index every interval
+                (*proxyServerCounterPtr) += 1;
+            }
+            (*workerCounterPtr) += 1;
 
-           isProxyEmpty = true;
-       }
-
-       if (!proxyServersList.isEmpty())
-       {
-           isProxyEmpty = false;
-
-       }
-
-       // if workerCounter == *proxyRotateIntervalPtr, reset workerCounter; if certain number of
-       // http request have been made rotate proxy
-       if (*workerCounterPtr <= proxyRotateInterval)
-       {
-           // only rotate each proxy if proxyCounterPtr is not greater than our proxyServer qlist
-           if ((*proxyServerCounterPtr) <= proxyServersList.size())
-           {
-               // if proxy counter is not greater than proxyServer qlist, proxyCounter can increment
-               canProxyCounterIncrement = true;
-           }
-
-           // if proxy counter is equal to the size of proxyServer qlist, we cant increment
-           if ((*proxyServerCounterPtr) == proxyServersList.size())
-           {
-               canProxyCounterIncrement = false;
-               // if proxyServerCounter is equal to the size of the proxyServer qlist, reset it to 0
-               *proxyServerCounterPtr = 0;
-           }
-
-
-           // if proxies contained in qlist empty in main thread, if so clear the proxylist in this thread also
-           if (isProxyEmpty == true && proxyServersArray.size() == 0)
-           {
-               //qDebug() << "Proxy Empty";
-               //qDebug() << *proxyServers;
-               //qDebug() <<proxyServersArray.size();
-               proxyServersList.clear();
-               proxies = "";
-           }
-
-           // if proxies contained in qlist are not empty, and we can keep incrementing,
-           // our proxies are good to use/rotate
-           if (isProxyEmpty == false && canProxyCounterIncrement == true)
-           {
-               proxies = proxyServersList.value(*proxyServerCounterPtr);
-               //qDebug() << "Counter-->" << proxies;
-
-           }
-           //qDebug() << "Counter-->" << *proxyServerCounterPtr;
-           //qDebug() << "Proxies-->" << proxies;
-
-       }
-
-
-       // if workerCounter is greater than *proxyRotateIntervalPtr/ amount of http request before proxy rotates
-       // or if a httpStatusError occured
-       if (*workerCounterPtr >= proxyRotateInterval)
-       {
-           // restart workerCounter
-           *workerCounterPtr = 0;
-           // increment proxyServerPtr to go through each proxyServer index every interval
-           (*proxyServerCounterPtr) += 1;
-
-           QUrl proxies_(proxies);
-           QNetworkProxy proxy;
-           int proxyPort =proxies_.port();
-           proxy.setType(QNetworkProxy::Socks5Proxy);
-           proxy.setUser("username");
-           proxy.setPassword("password");
-           proxy.setType(QNetworkProxy::HttpProxy);
-           proxy.setHostName(proxies_.host());
-           proxy.setPort(static_cast<quint16>(proxyPort));
-           QNetworkProxy::setApplicationProxy(proxy);
-       }
-
-       // increment workerCounter if we have not hit our http request limit to rotate each proxy
-       (*workerCounterPtr) += 1;
-       return DEFAULT_PROXY_SETTINGS;
-
-   }// end of if proxyServersArray size is less than 4
+            return proxies;
+    }// end of if proxy is empty
 
 }
 
 void WebView::view1Page(QWebPage *page)
 {
 
-    qDebug() << "proxy rotater xxxx--->" << proxyRotater();
-
-    /******
-      If httpStatus Errors occured/viewPage1ProxyRotate == true
-      and proxyRotater() ==1/has proxy list, use list
-    *****/
-    if(viewPage1ProxyRotate ==true && proxyRotater() == 1)
-    {
         if(!proxyList1.isEmpty())
         {
+                  QNetworkProxy networkProxy;
+                  networkProxy.setType(QNetworkProxy::Socks5Proxy);
+                  networkProxy.setUser("username");
+                  networkProxy.setPassword("password");
+                  networkProxy.setType(QNetworkProxy::HttpProxy);
+                  QUrl proxy("http://" + proxyRotater(proxyList1));
+                  networkProxy.setHostName(proxy.host());
+                  networkProxy.setPort(static_cast<quint16>(proxy.port()));
+                  page->networkAccessManager()->setProxy(networkProxy);
+                  emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+                 qDebug() << "List 1" << proxyList1;
+                 qDebug() << "List 1 Rotate?" << proxyRotater(proxyList1);
+                 qDebug() << "Proxy host --> "<<proxy.host();
+                 qDebug() << "Proxy port --> "<<proxy.port();
 
         }
-        qDebug() << "View 1 Http status ERROR ,Use proxy list ";
-    }
-    /******
-      If httpStatus Errors occur/viewPage1ProxyRotate == true
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage1ProxyRotate == true && proxyRotater() == 0)
-    {
-        qDebug() << "View 1 Http status ERROR ,Use default proxy settings";
-
-    }
-
-
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage1ProxyRotate == false && proxyRotater() == 0)
-    {
-        qDebug() << "View 1 Http status SUCCESSFUL ,,Use default proxy settings ";
-
-    }
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==1/use proxy list
-    *****/
-    if(viewPage1ProxyRotate == false && proxyRotater() == 1)
-    {
-        qDebug() << "View 1 Http status SUCCESSFUL  Use proxy list ";
-
-    }
-
 
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
 
-        connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply *)),
+        connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply * )),
                              this,SLOT(view1HttpResponseFinished(QNetworkReply *)));
 
         if (!success)
@@ -371,7 +374,7 @@ void WebView::view1HttpResponseFinished(QNetworkReply * reply)
     if(httpStatusCode ==200)
     {
         viewPage1ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded \n"));
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
 
     }
     if(httpStatusCode> 200)
@@ -380,6 +383,9 @@ void WebView::view1HttpResponseFinished(QNetworkReply * reply)
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode));
 
     }
+
+
+
 
   //  emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->error()));
 
@@ -495,52 +501,22 @@ void WebView::view1HttpResponseFinished(QNetworkReply * reply)
 
 void WebView::view2Page(QWebPage *page)
 {
-
-
-
-    /******
-      If httpStatus Errors occured/viewPage1ProxyRotate == true
-      and proxyRotater() ==1/has proxy list, use list
-    *****/
-    if(viewPage2ProxyRotate ==true && proxyRotater() == 1)
+    if(!proxyList2.isEmpty())
     {
-        if(!proxyList1.isEmpty())
-        {
-
-        }
-        qDebug() << "View 2 Http status ERROR ,Use proxy list ";
-    }
-    /******
-      If httpStatus Errors occur/viewPage1ProxyRotate == true
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage2ProxyRotate == true && proxyRotater() == 0)
-    {
-        qDebug() << "View 2 Http status ERROR ,Use default proxy settings";
-
+              QNetworkProxy networkProxy;
+              networkProxy.setType(QNetworkProxy::Socks5Proxy);
+              networkProxy.setUser("username");
+              networkProxy.setPassword("password");
+              networkProxy.setType(QNetworkProxy::HttpProxy);
+              QUrl proxy("http://"+proxyRotater(proxyList2));
+              networkProxy.setHostName(proxy.host());
+              networkProxy.setPort(static_cast<quint16>(proxy.port()));
+              page->networkAccessManager()->setProxy(networkProxy);
+              emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+             qDebug() << "List 2" << proxyList2;
+             qDebug() << "List 2 Rotate?" << proxyRotater(proxyList2);
     }
 
-
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage2ProxyRotate == false && proxyRotater() == 0)
-    {
-        qDebug() << "View 2 Http status SUCCESSFUL ,Use default proxy settings ";
-
-    }
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==1/use proxy list
-    *****/
-    if(viewPage2ProxyRotate == false && proxyRotater() == 1)
-    {
-        qDebug() << "View 2 Http status SUCCESSFUL ,Use proxy list ";
-
-    }
 
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
 
@@ -636,7 +612,7 @@ void WebView::view2HttpResponseFinished(QNetworkReply * reply)
     if(httpStatusCode ==200)
     {
         viewPage2ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded \n"));
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
 
     }
     if(httpStatusCode> 200)
@@ -651,51 +627,20 @@ void WebView::view2HttpResponseFinished(QNetworkReply * reply)
 
 
 void WebView::view3Page(QWebPage *page){
-
-
-
-    /******
-      If httpStatus Errors occured/viewPage1ProxyRotate == true
-      and proxyRotater() ==1/has proxy list, use list
-    *****/
-    if(viewPage3ProxyRotate ==true && proxyRotater() == 1)
+    if(!proxyList3.isEmpty())
     {
-        if(!proxyList1.isEmpty())
-        {
-
-        }
-        qDebug() << "View 3 Http status ERROR ,Use proxy list ";
-    }
-    /******
-      If httpStatus Errors occur/viewPage1ProxyRotate == true
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage3ProxyRotate == true && proxyRotater() == 0)
-    {
-        qDebug() << "View 3 Http status ERROR ,Use default proxy settings";
-
-    }
-
-
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage3ProxyRotate == false && proxyRotater() == 0)
-    {
-        qDebug() << "View 3 Http status SUCCESSFUL ,Use default proxy settings ";
-
-    }
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==1/use proxy list
-    *****/
-    if(viewPage3ProxyRotate == false && proxyRotater() == 1)
-    {
-        qDebug() << "View 3 Http status SUCCESSFUL ,Use proxy list ";
-
+              QNetworkProxy networkProxy;
+              networkProxy.setType(QNetworkProxy::Socks5Proxy);
+              networkProxy.setUser("username");
+              networkProxy.setPassword("password");
+              networkProxy.setType(QNetworkProxy::HttpProxy);
+              QUrl proxy("http://"+proxyRotater(proxyList3));
+              networkProxy.setHostName(proxy.host());
+              networkProxy.setPort(static_cast<quint16>(proxy.port()));
+              page->networkAccessManager()->setProxy(networkProxy);
+              emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+             qDebug() << "List 3" << proxyList3;
+             qDebug() << "List 3 Rotate?" << proxyRotater(proxyList3);
     }
 
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
@@ -793,7 +738,7 @@ void WebView::view3HttpResponseFinished(QNetworkReply * reply)
     if(httpStatusCode ==200)
     {
         viewPage3ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded \n"));
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
 
     }
     if(httpStatusCode> 200)
@@ -810,51 +755,21 @@ void WebView::view3HttpResponseFinished(QNetworkReply * reply)
 void WebView::view4Page(QWebPage *page){
 
 
-    /******
-      If httpStatus Errors occured/viewPage1ProxyRotate == true
-      and proxyRotater() ==1/has proxy list, use list
-    *****/
-    if(viewPage4ProxyRotate ==true && proxyRotater() == 1)
+    if(!proxyList4.isEmpty())
     {
-        if(!proxyList1.isEmpty())
-        {
-
-        }
-        qDebug() << "View 4 Http status ERROR ,Use proxy list ";
+              QNetworkProxy networkProxy;
+              networkProxy.setType(QNetworkProxy::Socks5Proxy);
+              networkProxy.setUser("username");
+              networkProxy.setPassword("password");
+              networkProxy.setType(QNetworkProxy::HttpProxy);
+              QUrl proxy("http://"+proxyRotater(proxyList4));
+              networkProxy.setHostName(proxy.host());
+              networkProxy.setPort(static_cast<quint16>(proxy.port()));
+              page->networkAccessManager()->setProxy(networkProxy);
+             emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+             qDebug() << "List 4" << proxyList4;
+             qDebug() << "List 4 Rotate?" << proxyRotater(proxyList4);
     }
-    /******
-      If httpStatus Errors occur/viewPage1ProxyRotate == true
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage4ProxyRotate == true && proxyRotater() == 0)
-    {
-        qDebug() << "View 4 Http status ERROR ,Use default proxy settings";
-
-    }
-
-
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==0/use default proxy settings
-    *****/
-    if(viewPage4ProxyRotate == false && proxyRotater() == 0)
-    {
-        qDebug() << "View 4 Http status SUCCESSFUL ,Use default";
-
-    }
-
-    /******
-      If httpStatus Errors dont occur/viewPage1ProxyRotate == false
-      and proxyRotater() ==1/use proxy list
-    *****/
-    if(viewPage4ProxyRotate == false && proxyRotater() == 1)
-    {
-        qDebug() << "View 4 Http status SUCCESSFUL ,Use proxy list ";
-
-    }
-
-
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
 
         connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply *)),
@@ -947,7 +862,7 @@ void WebView::view4HttpResponseFinished(QNetworkReply * reply)
     if(httpStatusCode ==200)
     {
         viewPage4ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded \n"));
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
 
     }
     if(httpStatusCode> 200)
@@ -1036,6 +951,6 @@ void WebView::connOpen()
 
 void WebView::connClose()
 {
+    mydb.removeDatabase(QSqlDatabase::database().connectionName());
     mydb.close();
-    mydb.removeDatabase(QSqlDatabase::defaultConnection);
 }

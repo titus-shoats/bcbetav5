@@ -36,7 +36,8 @@ public:
    void view4Page(QWebPage *page);
    void connOpen();
    void connClose();
-   int proxyRotater();
+   QString proxyRotater(QStringList proxyServersList);
+   void initProxySettings();
 
 
 protected:
@@ -77,7 +78,8 @@ private:
     QStringList proxyList3;
     QStringList proxyList4;
 
-
+    QJsonArray proxyServersArray;
+    int proxyRotateInterval;
 
 
 
