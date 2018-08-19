@@ -72,7 +72,9 @@ void MainWindow::receiverLoopWebViewParams(QString searchEngineParam)
 {
     //QMessageBox::information(this, "...", QString("URLs?? ") + QString( searchEngineParam));
 
-    const QUrl url1("https://www.google.com/search?q=whats+my+ip&oq=whats+my+ip&aqs=chrome.0.35i39j0l5.3021j0j7&sourceid=chrome&ie=UTF-8");
+    //    const QUrl url1("https://www.google.com/search?q=whats+my+ip&oq=whats+my+ip&aqs=chrome.0.35i39j0l5.3021j0j7&sourceid=chrome&ie=UTF-8");
+
+    const QUrl url1(searchEngineParam);
     request1->setUrl(url1);
     view1->load(*request1);
     view1->view1Page(view1->page());

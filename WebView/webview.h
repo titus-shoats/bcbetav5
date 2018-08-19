@@ -36,8 +36,8 @@ public:
    void view4Page(QWebPage *page);
    void connOpen();
    void connClose();
-   QString* proxyRotater(QStringList proxyServersList,QWebPage *page);
-   void initProxySettings();
+   void proxyListRotater(QStringList proxyServersList,QWebPage *page);
+   void initProxyListSettings();
 
 
 protected:
@@ -83,7 +83,8 @@ private:
     QString *proxies;
     bool isProxyEmpty;
     bool canProxyCounterIncrement;
-
+    bool isMultiURLSelected;
+    QString *replyUrl;
 
 signals:
     void emitSenderTimer();

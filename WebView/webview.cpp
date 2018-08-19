@@ -20,8 +20,6 @@ WebView::WebView(QWidget *parent)
     proxyServerCounterPtr =&proxyServerCounterNum;
 
     proxies = new QString();
-    isProxyEmpty = false;
-    canProxyCounterIncrement = false;
 
     httpStatusNum = 0;
     httpStatusPtr =&httpStatusNum;
@@ -29,11 +27,12 @@ WebView::WebView(QWidget *parent)
    connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
 
    initProxyListSettings();
+   replyUrl = new QString();
 
 }
 
 WebView::~WebView(){
-   // delete request;
+    delete replyUrl;
     emailListFile->close();
     delete emailListFile;
     delete emailList;
@@ -99,20 +98,34 @@ void WebView::initProxyListSettings()
     proxyServersArray = proxyServers.toArray();
     QJsonValue timerOptions = jsonObject.value(QString("TimerOptions"));
     QJsonObject timerOptionsKey = timerOptions.toObject();
+    QJsonValue otherOptions = jsonObject.value(QString("OtherOptions"));
+    QJsonObject otherOptionsKey = otherOptions.toObject();
+    QString multiUrlOption = otherOptionsKey["MULTI_URL_OPTION"].toString();
+
     proxyRotateInterval = timerOptionsKey["ProxyRotate"].toInt();
     QStringList tempList1;
-    QStringList tempList2;
+    QStringList tempList2;  
+    isProxyEmpty = false;
+    canProxyCounterIncrement = false;
+    isMultiURLSelected = false;
 
-    for(int i =0; i < proxyServersArray.size(); i++ )
+    if(multiUrlOption == "1_URL_SELECTED")
     {
-
-        //proxyServersList.prepend(proxyServersArray[i].toString());
+        isMultiURLSelected = false;
     }
+    if(multiUrlOption == "MULTI_URL_SELECTED")
+    {
+        isMultiURLSelected = true;
+    }
+
 
     if(!proxyServersArray.isEmpty())
     {
-        /*******If proxy servers are less than 4, insert proxies into 4 list*****/
-        if(proxyServersArray.size() >= 4)
+        /*******
+         If proxy servers are greater or equal to 4, and multiurl is selected
+         insert proxies into 4 list
+         *****/
+        if(proxyServersArray.size() >= 4  && isMultiURLSelected == true)
         {
             /******Create 2 proxy list*****/
               for(int i=0; i < proxyServersArray.size(); i++)
@@ -122,9 +135,7 @@ void WebView::initProxyListSettings()
                       tempList1<< proxyServersArray[i].toString();
                   }else
                   {
-
                       tempList2 << proxyServersArray[i].toString();
-
                   }
               }
 
@@ -134,13 +145,10 @@ void WebView::initProxyListSettings()
                   if(i%2==0)
 
                   {
-
                       proxyList3 << tempList1.value(i);
                   }else
                   {
-
                       proxyList4 << tempList1.value(i);
-
                   }
               }
 
@@ -150,22 +158,22 @@ void WebView::initProxyListSettings()
                   if(i%2==0)
 
                   {
-
-
                       proxyList1 << tempList2.value(i);
                   }else
                   {
-
-
                       proxyList2 << tempList2.value(i);
-
                   }
               }
         }// end if proxy array size is greater than 4
 
 
-        /*******If proxy servers are less than 4, insert proxies into 1 list*****/
-        if(proxyServersArray.size() < 4)
+        /*******
+         If proxy servers are less than 4, and multiurl is not selected
+         If proxy servers are greater or equal to 4, and multiurl is not selected
+         insert proxies into 1 list
+         *****/
+        if((proxyServersArray.size() < 4 && isMultiURLSelected == false) ||
+         (proxyServersArray.size()  >=4 && isMultiURLSelected == false))
         {
             for(int i=0; i < proxyServersArray.size(); i++)
             {
@@ -182,7 +190,7 @@ void WebView::initProxyListSettings()
 
 
 // Rotates proxy with a specified interval, and rotate due to a httpStatus Code
-QString* WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
+void WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
 {
 
 
@@ -204,7 +212,7 @@ QString* WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
 
             // if workerCounter == *proxyRotateIntervalPtr, reset workerCounter; if certain number of
             // http request have been made rotate proxy
-            if (*workerCounterPtr <= 3)
+            if (*workerCounterPtr <= proxyRotateInterval)
             {
                 // only rotate each proxy if proxyCounterPtr is not greater than our proxyServer qlist
                 if ((*proxyServerCounterPtr) <= proxyServersList.size())
@@ -246,22 +254,16 @@ QString* WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
 
             }
 
-
             // if workerCounter is greater than *proxyRotateIntervalPtr/ amount of http request before proxy rotates
             // or if a httpStatusError occured
-            if (*workerCounterPtr >= 3)
+            if (*workerCounterPtr >= proxyRotateInterval)
             {
                 // restart workerCounter
                 *workerCounterPtr = 0;
                 // increment proxyServerPtr to go through each proxyServer index every interval
                 (*proxyServerCounterPtr) += 1;
             }
-//            qDebug() << "Counter-->" << *proxyServerCounterPtr;
-//            qDebug() << "Proxies-->" << *proxies;
-//            qDebug() << "Worker Counter-->" <<  *workerCounterPtr;
-
             (*workerCounterPtr) += 1;
-           // qDebug() << "Worker Counter-->" <<  *workerCounterPtr;
 
             if(!proxyServersList.isEmpty())
             {
@@ -288,7 +290,7 @@ QString* WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
                    qDebug() << "Proxy port --> "<<proxy.port();
                }
             }
-            return proxies;
+
     }// end of if proxy is empty
 
 }
@@ -311,8 +313,6 @@ void WebView::view1Page(QWebPage *page)
            // qDebug() << "Could not load page Multi Instance 1";
         }
        if(success) {
-
-
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
             QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
@@ -389,25 +389,63 @@ void WebView::view1Page(QWebPage *page)
 void WebView::view1HttpResponseFinished(QNetworkReply * reply)
 {
     int httpStatusCode;
+    QUrl url(reply->url());
     httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
+
+    if(httpStatusCode <200)
+    {
+        viewPage1ProxyRotate = false;
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
 
     if(httpStatusCode ==200)
     {
         viewPage1ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
-
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
-        viewPage1ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode));
 
+        viewPage1ProxyRotate = true;
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
+    switch(reply->error())
+    {
+    case QNetworkReply::NoError:
+         // No error
+         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
+         return;
+    case QNetworkReply::ContentNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Content Not Found"));
+        break;
+    case QNetworkReply::ConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
+                             +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::TimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::HostNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionClosedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyTimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    default:
+        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
 
-
-
-  //  emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->error()));
 
 
 //    switch (httpStatusCode)
@@ -616,22 +654,61 @@ void WebView::view2HttpResponseFinished(QNetworkReply * reply)
 
 
     int httpStatusCode;
+    QUrl url(reply->url());
     httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
+
+    if(httpStatusCode <200)
+    {
+        viewPage2ProxyRotate = false;
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
 
     if(httpStatusCode ==200)
     {
         viewPage2ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
-
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
         viewPage2ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode));
-
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
+    switch(reply->error())
+    {
+    case QNetworkReply::NoError:
+         // No error
+         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
+         return;
+    case QNetworkReply::ContentNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Content Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
+                             +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::TimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::HostNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionClosedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")   +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyTimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    default:
+        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
-    //emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->error()));
 }
 
 
@@ -729,24 +806,61 @@ void WebView::view3Page(QWebPage *page){
 void WebView::view3HttpResponseFinished(QNetworkReply * reply)
 {
 
-
     int httpStatusCode;
+    QUrl url(reply->url());
     httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
+
+    if(httpStatusCode <200)
+    {
+        viewPage3ProxyRotate = false;
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
 
     if(httpStatusCode ==200)
     {
         viewPage3ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
-
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
         viewPage3ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode));
-
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
-
-  //  emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->error()));
+    switch(reply->error())
+    {
+    case QNetworkReply::NoError:
+         // No error
+         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
+         return;
+    case QNetworkReply::ContentNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Content Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
+                             +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::TimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::HostNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionClosedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error") +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyTimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    default:
+        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
+    }
 
 }
 
@@ -845,21 +959,64 @@ void WebView::view4HttpResponseFinished(QNetworkReply * reply)
 {
     int httpStatusCode;
     httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QUrl url(reply->url());
+    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())
+                        +" "+ QString(url.host()+url.path()+url.query()));
+
+    if(httpStatusCode <200)
+    {
+
+        viewPage4ProxyRotate = false;
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)
+                            +" "+ QString(url.host()+url.path()+url.query()));
+    }
 
     if(httpStatusCode ==200)
     {
         viewPage4ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded"));
-
+        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
         viewPage4ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode));
-
+        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
+    }
+    switch(reply->error())
+    {
+    case QNetworkReply::NoError:
+         // No error
+         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
+         return;
+    case QNetworkReply::ContentNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Content Not Found"));
+        break;
+    case QNetworkReply::ConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
+                             +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::TimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")
+                             +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::HostNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyConnectionClosedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error"));
+        break;
+    case QNetworkReply::ProxyConnectionRefusedError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyNotFoundError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    case QNetworkReply::ProxyTimeoutError:
+        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
+        break;
+    default:
+        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
-   // emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->error()));
 }
 
 

@@ -14,11 +14,6 @@
         "searchResultsPagesNumber": 1
     },
     "ProxyServers": [
-        "218.103.112.49:3128",
-        "118.103.112.49:3128",
-        "318.103.112.49:3128",
-        "418.103.112.49:3128",
-        "518.103.112.49:3128"
     ],
     "SearchEngineOptions": [
         "http://google.com",
@@ -30,10 +25,16 @@
         "site:facebook.com",
         "site:soundcloud.com",
         "site:reverbnation.com",
-        "site:myspace.com"
+        "site:myspace.com",
+        "site:youtube.com",
+        "site:spotify.com",
+        "site:livemixtapes.com",
+        "site:datpiff.com",
+        "site:hiphopdx.com",
+        "site:twitter.com"
     ],
     "TimerOptions": {
         "HarvesterTimer": 5,
-        "ProxyRotate": 1
+        "ProxyRotate": 3
     }
 }
