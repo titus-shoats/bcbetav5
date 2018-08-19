@@ -36,7 +36,7 @@ public:
    void view4Page(QWebPage *page);
    void connOpen();
    void connClose();
-   QString proxyRotater(QStringList proxyServersList);
+   QString* proxyRotater(QStringList proxyServersList,QWebPage *page);
    void initProxySettings();
 
 
@@ -80,7 +80,9 @@ private:
 
     QJsonArray proxyServersArray;
     int proxyRotateInterval;
-
+    QString *proxies;
+    bool isProxyEmpty;
+    bool canProxyCounterIncrement;
 
 
 signals:

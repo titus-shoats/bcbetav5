@@ -19,13 +19,16 @@ WebView::WebView(QWidget *parent)
     proxyServerCounterNum =0;
     proxyServerCounterPtr =&proxyServerCounterNum;
 
+    proxies = new QString();
+    isProxyEmpty = false;
+    canProxyCounterIncrement = false;
 
     httpStatusNum = 0;
     httpStatusPtr =&httpStatusNum;
    // connect(&this->worker,&WebView::emitWebViewLog,this,&Worker::receiverWebViewLog);
    connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
 
-   initProxySettings();
+   initProxyListSettings();
 
 }
 
@@ -35,6 +38,7 @@ WebView::~WebView(){
     delete emailListFile;
     delete emailList;
     delete readEmailFile;
+    delete proxies;
     //connClose();
 }
 
@@ -77,7 +81,7 @@ void WebView::newPageLoading()
     inLoading = true;
     loadingTime.start();
 }
-void WebView::initProxySettings()
+void WebView::initProxyListSettings()
 {
     QList <QString> *proxyServersJson;
     proxyServersJson = new QList<QString>();
@@ -98,6 +102,7 @@ void WebView::initProxySettings()
     proxyRotateInterval = timerOptionsKey["ProxyRotate"].toInt();
     QStringList tempList1;
     QStringList tempList2;
+
     for(int i =0; i < proxyServersArray.size(); i++ )
     {
 
@@ -107,7 +112,7 @@ void WebView::initProxySettings()
     if(!proxyServersArray.isEmpty())
     {
         /*******If proxy servers are less than 4, insert proxies into 4 list*****/
-        if(proxyServersArray.size() >4)
+        if(proxyServersArray.size() >= 4)
         {
             /******Create 2 proxy list*****/
               for(int i=0; i < proxyServersArray.size(); i++)
@@ -177,12 +182,10 @@ void WebView::initProxySettings()
 
 
 // Rotates proxy with a specified interval, and rotate due to a httpStatus Code
-QString WebView::proxyRotater(QStringList proxyServersList)
+QString* WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
 {
 
-    bool isProxyEmpty = false;
-    bool canProxyCounterIncrement = false;
-    QString proxies;
+
 
     if(!proxyServersArray.isEmpty())
     {
@@ -201,7 +204,7 @@ QString WebView::proxyRotater(QStringList proxyServersList)
 
             // if workerCounter == *proxyRotateIntervalPtr, reset workerCounter; if certain number of
             // http request have been made rotate proxy
-            if (*workerCounterPtr <= proxyRotateInterval)
+            if (*workerCounterPtr <= 3)
             {
                 // only rotate each proxy if proxyCounterPtr is not greater than our proxyServer qlist
                 if ((*proxyServerCounterPtr) <= proxyServersList.size())
@@ -226,34 +229,65 @@ QString WebView::proxyRotater(QStringList proxyServersList)
                     //qDebug() << *proxyServers;
                     //qDebug() <<proxyServersArray.size();
                     proxyServersList.clear();
-                    proxies = "";
+                    *proxies = "";
                 }
 
                 // if proxies contained in qlist are not empty, and we can keep incrementing,
                 // our proxies are good to use/rotate
                 if (isProxyEmpty == false && canProxyCounterIncrement == true)
                 {
-                    proxies = proxyServersList.value(*proxyServerCounterPtr);
-                    //qDebug() << "Counter-->" << proxies;
+                    if(!proxyServersList.value(*proxyServerCounterPtr).isEmpty())
+                    {
+                        *proxies = proxyServersList.value(*proxyServerCounterPtr);
+
+                    }
 
                 }
-                //qDebug() << "Counter-->" << *proxyServerCounterPtr;
-                //qDebug() << "Proxies-->" << proxies;
 
             }
 
 
             // if workerCounter is greater than *proxyRotateIntervalPtr/ amount of http request before proxy rotates
             // or if a httpStatusError occured
-            if (*workerCounterPtr >= proxyRotateInterval)
+            if (*workerCounterPtr >= 3)
             {
                 // restart workerCounter
                 *workerCounterPtr = 0;
                 // increment proxyServerPtr to go through each proxyServer index every interval
                 (*proxyServerCounterPtr) += 1;
             }
-            (*workerCounterPtr) += 1;
+//            qDebug() << "Counter-->" << *proxyServerCounterPtr;
+//            qDebug() << "Proxies-->" << *proxies;
+//            qDebug() << "Worker Counter-->" <<  *workerCounterPtr;
 
+            (*workerCounterPtr) += 1;
+           // qDebug() << "Worker Counter-->" <<  *workerCounterPtr;
+
+            if(!proxyServersList.isEmpty())
+            {
+                QNetworkProxy networkProxy;
+               // networkProxy.setType(QNetworkProxy::Socks5Proxy);
+                networkProxy.setUser("username");
+                networkProxy.setPassword("password");
+                networkProxy.setType(QNetworkProxy::HttpProxy);
+                QUrl proxy("http://" + *proxies);
+                networkProxy.setHostName(proxy.host());
+                networkProxy.setPort(static_cast<quint16>(proxy.port()));
+                page->networkAccessManager()->setProxy(networkProxy);
+                emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+                qDebug() << "List --> " << proxyServersList;
+
+                qDebug() << "Rotating Proxy--> " << *proxies;
+
+               if(!proxy.host().isEmpty())
+               {
+                   qDebug() << "Proxy host --> "<<proxy.host();
+               }
+               if(proxy.port() != -1)
+               {
+                   qDebug() << "Proxy port --> "<<proxy.port();
+               }
+            }
             return proxies;
     }// end of if proxy is empty
 
@@ -264,21 +298,7 @@ void WebView::view1Page(QWebPage *page)
 
         if(!proxyList1.isEmpty())
         {
-                  QNetworkProxy networkProxy;
-                  networkProxy.setType(QNetworkProxy::Socks5Proxy);
-                  networkProxy.setUser("username");
-                  networkProxy.setPassword("password");
-                  networkProxy.setType(QNetworkProxy::HttpProxy);
-                  QUrl proxy("http://" + proxyRotater(proxyList1));
-                  networkProxy.setHostName(proxy.host());
-                  networkProxy.setPort(static_cast<quint16>(proxy.port()));
-                  page->networkAccessManager()->setProxy(networkProxy);
-                  emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
-                 qDebug() << "List 1" << proxyList1;
-                 qDebug() << "List 1 Rotate?" << proxyRotater(proxyList1);
-                 qDebug() << "Proxy host --> "<<proxy.host();
-                 qDebug() << "Proxy port --> "<<proxy.port();
-
+             proxyListRotater(proxyList1,page);
         }
 
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
@@ -288,7 +308,7 @@ void WebView::view1Page(QWebPage *page)
 
         if (!success)
         {
-            qDebug() << "Could not load page Multi Instance 1";
+           // qDebug() << "Could not load page Multi Instance 1";
         }
        if(success) {
 
@@ -503,18 +523,7 @@ void WebView::view2Page(QWebPage *page)
 {
     if(!proxyList2.isEmpty())
     {
-              QNetworkProxy networkProxy;
-              networkProxy.setType(QNetworkProxy::Socks5Proxy);
-              networkProxy.setUser("username");
-              networkProxy.setPassword("password");
-              networkProxy.setType(QNetworkProxy::HttpProxy);
-              QUrl proxy("http://"+proxyRotater(proxyList2));
-              networkProxy.setHostName(proxy.host());
-              networkProxy.setPort(static_cast<quint16>(proxy.port()));
-              page->networkAccessManager()->setProxy(networkProxy);
-              emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
-             qDebug() << "List 2" << proxyList2;
-             qDebug() << "List 2 Rotate?" << proxyRotater(proxyList2);
+         proxyListRotater(proxyList2,page);
     }
 
 
@@ -524,11 +533,11 @@ void WebView::view2Page(QWebPage *page)
                 this,SLOT(view2HttpResponseFinished(QNetworkReply *)));
         if (!success)
         {
-            qDebug() << "Could not load page view 2";
+            //qDebug() << "Could not load page view 2";
         }
        if(success) {
 
-            qDebug() << "Page  loaded view 2";
+           // qDebug() << "Page  loaded view 2";
 
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
@@ -629,18 +638,7 @@ void WebView::view2HttpResponseFinished(QNetworkReply * reply)
 void WebView::view3Page(QWebPage *page){
     if(!proxyList3.isEmpty())
     {
-              QNetworkProxy networkProxy;
-              networkProxy.setType(QNetworkProxy::Socks5Proxy);
-              networkProxy.setUser("username");
-              networkProxy.setPassword("password");
-              networkProxy.setType(QNetworkProxy::HttpProxy);
-              QUrl proxy("http://"+proxyRotater(proxyList3));
-              networkProxy.setHostName(proxy.host());
-              networkProxy.setPort(static_cast<quint16>(proxy.port()));
-              page->networkAccessManager()->setProxy(networkProxy);
-              emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
-             qDebug() << "List 3" << proxyList3;
-             qDebug() << "List 3 Rotate?" << proxyRotater(proxyList3);
+         proxyListRotater(proxyList3,page);
     }
 
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
@@ -652,10 +650,10 @@ void WebView::view3Page(QWebPage *page){
 
         if (!success)
         {
-            qDebug() << "Could not load page view 3";
+           // qDebug() << "Could not load page view 3";
         }
        if(success) {
-            qDebug() << "Page loaded view 3";
+          //  qDebug() << "Page loaded view 3";
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
             QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
@@ -757,18 +755,7 @@ void WebView::view4Page(QWebPage *page){
 
     if(!proxyList4.isEmpty())
     {
-              QNetworkProxy networkProxy;
-              networkProxy.setType(QNetworkProxy::Socks5Proxy);
-              networkProxy.setUser("username");
-              networkProxy.setPassword("password");
-              networkProxy.setType(QNetworkProxy::HttpProxy);
-              QUrl proxy("http://"+proxyRotater(proxyList4));
-              networkProxy.setHostName(proxy.host());
-              networkProxy.setPort(static_cast<quint16>(proxy.port()));
-              page->networkAccessManager()->setProxy(networkProxy);
-             emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
-             qDebug() << "List 4" << proxyList4;
-             qDebug() << "List 4 Rotate?" << proxyRotater(proxyList4);
+         proxyListRotater(proxyList4,page);
     }
     connect(this, &QWebView::loadFinished, [this,page](bool success) {
 
@@ -777,10 +764,10 @@ void WebView::view4Page(QWebPage *page){
 
         if (!success)
         {
-            qDebug() << "Could not load page view 4";
+          //  qDebug() << "Could not load page view 4";
         }
        if(success) {
-            qDebug() << "Page loaded view 4";
+         //   qDebug() << "Page loaded view 4";
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
             QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
@@ -951,6 +938,6 @@ void WebView::connOpen()
 
 void WebView::connClose()
 {
-    mydb.removeDatabase(QSqlDatabase::database().connectionName());
-    mydb.close();
+  //  mydb.removeDatabase(QSqlDatabase::database().connectionName());
+   // mydb.close();
 }

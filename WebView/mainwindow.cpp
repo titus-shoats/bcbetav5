@@ -88,10 +88,10 @@ void MainWindow::receiverMultiLoopWebViewParams(QString searchEngineParamMulti1,
    // QMessageBox::information(this, "...", QString("URLs?? ") + QString( searchEngineParamMulti4));
 
 
-     qDebug() << "Multi 1 " << searchEngineParamMulti1;
-     qDebug() << "Multi 2 "<<  searchEngineParamMulti2;
-     qDebug() << "Multi 3 "<<  searchEngineParamMulti3;
-     qDebug() << "Multi 4 "<<  searchEngineParamMulti4;
+//     qDebug() << "Multi 1 " << searchEngineParamMulti1;
+//     qDebug() << "Multi 2 "<<  searchEngineParamMulti2;
+//     qDebug() << "Multi 3 "<<  searchEngineParamMulti3;
+//     qDebug() << "Multi 4 "<<  searchEngineParamMulti4;
 
     const QUrl url1(searchEngineParamMulti1);
     const QUrl url2(searchEngineParamMulti2);
