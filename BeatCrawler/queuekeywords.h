@@ -13,6 +13,8 @@
 #include <QMutex>
 #include <QThread>
 #include <QTextStream>
+#include <config.h>
+
 
 namespace Ui {
 class QueueKeywords;
@@ -27,6 +29,8 @@ public:
     ~QueueKeywords();
     void openCurrentKeywordJsonFile();
     void getCurrentKeywords();
+    QString getRelativePath(QString fileName);
+
 
 
 private:
@@ -58,7 +62,7 @@ private:
     QString lastListKeyword3;
     QString lastListKeyword4;
     QString lastKeyword;
-
+    QStringList removeDuplicatKeywords;
 
 
 public slots:

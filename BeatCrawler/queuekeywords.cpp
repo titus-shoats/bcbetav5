@@ -36,7 +36,9 @@ void QueueKeywords::openCurrentKeywordJsonFile()
 {
     QString val;
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/currentkeywords.json");
+    QString currentKeywordsFileName = getRelativePath("currentkeywords.json");
+
+    file.setFileName(currentKeywordsFileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
         qDebug() << "Error opening json file in queue keywords table";
     }
@@ -88,22 +90,22 @@ void QueueKeywords::receiverDisplayCurrentKeywords(QString keyword1,QString keyw
     If last  currentKeyword that was added to listwidget is  equal to the keyword,
     from the keyword argument, clear it, and make it null.
     ********/
-    if(lastListKeyword1 == currentKeywordList1)
-    {
-        currentKeywordList1.clear();
-    }
-    if(lastListKeyword2 == currentKeywordList2)
-    {
-        currentKeywordList2.clear();
-    }
-    if(lastListKeyword3 == currentKeywordList3)
-    {
-        currentKeywordList3.clear();
-    }
-    if(lastListKeyword4 == currentKeywordList4)
-    {
-        currentKeywordList4.clear();
-    }
+//    if(lastListKeyword1 == currentKeywordList1)
+//    {
+//        currentKeywordList1.clear();
+//    }
+//    if(lastListKeyword2 == currentKeywordList2)
+//    {
+//        currentKeywordList2.clear();
+//    }
+//    if(lastListKeyword3 == currentKeywordList3)
+//    {
+//        currentKeywordList3.clear();
+//    }
+//    if(lastListKeyword4 == currentKeywordList4)
+//    {
+//        currentKeywordList4.clear();
+//    }
 }
 
 void QueueKeywords::receiverDisplayCurrentKeyword(QString keyword)
@@ -121,20 +123,31 @@ void QueueKeywords::receiverDisplayCurrentKeyword(QString keyword)
 void QueueKeywords::receiverKeywordsQueueList()
 {
 
-   if(!currentKeywordList1.isEmpty() && !currentKeywordList1.isEmpty()
-           && !currentKeywordList1.isEmpty() && !currentKeywordList1.isEmpty())
-   {
+  if(!currentKeywordList1.isEmpty() && !currentKeywordList2.isEmpty()
+          && !currentKeywordList3.isEmpty() && !currentKeywordList4.isEmpty())
+  {
 
-       ui->listWidget_Keywords_Queue->addItem(currentKeywordList1 + QString(": Completed"));
-       ui->listWidget_Keywords_Queue->addItem(currentKeywordList2 + QString(": Completed"));
-       ui->listWidget_Keywords_Queue->addItem(currentKeywordList3 + QString(": Completed"));
-       ui->listWidget_Keywords_Queue->addItem(currentKeywordList4 + QString(": Completed"));
 
-       lastListKeyword1 = currentKeywordList1;
-       lastListKeyword2 = currentKeywordList2;
-       lastListKeyword3 = currentKeywordList3;
-       lastListKeyword4 = currentKeywordList4;
-   }
+      ui->listWidget_Keywords_Queue->addItem(currentKeywordList1 + QString(": Completed"));
+      ui->listWidget_Keywords_Queue->addItem(currentKeywordList2 + QString(": Completed"));
+      ui->listWidget_Keywords_Queue->addItem(currentKeywordList3 + QString(": Completed"));
+      ui->listWidget_Keywords_Queue->addItem(currentKeywordList4 + QString(": Completed"));
+
+      ui->listWidget_Keywords_Queue->clear();
+
+     removeDuplicatKeywords << currentKeywordList1 + QString(": Completed") <<currentKeywordList2+ QString(": Completed")
+                               <<currentKeywordList3+ QString(": Completed") <<currentKeywordList4+ QString(": Completed");
+
+      ui->listWidget_Keywords_Queue->clear();
+      for(int i=0; i < removeDuplicatKeywords.toSet().toList().size(); i++)
+      {
+
+
+          ui->listWidget_Keywords_Queue->addItem(removeDuplicatKeywords.toSet().toList().value(i));
+      }
+  }
+
+
 
    if(!currentKeyword.isEmpty())
    {
@@ -175,6 +188,7 @@ void QueueKeywords::getCurrentKeywords()
 
         if(wStop){
             ui->listWidget_Keywords_Queue->clear();
+            removeDuplicatKeywords.clear();
 
             break;
         }
@@ -191,4 +205,16 @@ void QueueKeywords::getCurrentKeywords()
 void QueueKeywords::receiverStopQueueKeywords()
 {
     wStop = true;
+}
+QString QueueKeywords::getRelativePath(QString fileName)
+{
+   // QDir dir("resources");
+   // QString filename = dir.relativeFilePath(fileName);
+   // return fileName;
+   // qDebug()<<  "r--> "<< QDir::current().path() +"/resources/"+ fileName;
+    //qDebug() <<  "a--> " << QDir::current().cd(QDir::current().path() +QString("/resources/"));
+   // qDebug() << QCoreApplication::applicationDirPath()+ "/resources/";
+    //C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/resources/
+    //return QCoreApplication::applicationDirPath()+ "/resources/"+ fileName;
+    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
 }

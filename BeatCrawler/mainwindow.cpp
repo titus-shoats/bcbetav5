@@ -58,9 +58,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pushButton_Previous_Email_Pagination->hide();
 
 
+
     queueKeywords = new QueueKeywords();
     worker = new Worker();
     emailTableTimer = new QTimer();
+    completeHarvestTimer = new QTimer();
+    emailCountTimer = new QTimer();
     connect(ui->tableWidget_Proxy->selectionModel(),
             SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this,
             SLOT(recieverProxyTableSelection(const QItemSelection &, const QItemSelection &)));
@@ -77,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
    connect(worker,SIGNAL(emitDisplayCurrentKeyword(QString)),
           this,SLOT(receiverDisplayCurrentKeyword(QString)));
 
-   connect(this,SIGNAL(emitEmailCount(int)),this,SLOT(receiverEmailCount(int)));
+   connect(emailTableTimer,SIGNAL(timeout()),this,SLOT(emailCount()));
   // connect(worker,SIGNAL(emitKeywordsQueueTable()),this,SLOT(receiverKeywordsQueueTable()));
 
    connect(this,SIGNAL(emitStopQueueKeywords()),queueKeywords,SLOT(receiverStopQueueKeywords()));
@@ -89,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
    connect(worker,SIGNAL(emitLogHarvesterStatus(QString)),this,SLOT(receiverLogHarvesterStatus(QString)));
 
+   connect(completeHarvestTimer,SIGNAL(timeout()),this,SLOT(completeHarvesterTimer()));
 
 
 
@@ -107,6 +111,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableView_Emails->resizeRowsToContents();
 
 
+    //ui->radioButton_Parse_Multi_URL->hide();
+
     ui->pushButton_Start->setCheckable(true);
     ui->checkBox_Email_Gmail->setChecked(true);
     ui->checkBox_Email_Hotmail->setChecked(true);
@@ -116,7 +122,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->checkBox_Google->setChecked(true);
     ui->checkBox_Bing->setChecked(true);
-    ui->checkBox_Aol->setChecked(true);
+    ui->checkBox_Yahoo->setChecked(true);
 
     ui->checkBox_Social_Facebook->setChecked(true);
     ui->checkBox_Social_Instagram->setChecked(true);
@@ -153,6 +159,8 @@ MainWindow::MainWindow(QWidget *parent) :
     emailRowEndNum =0;
     emailRowEndPtr = &emailRowEndNum;
 
+
+
     queryModel = new QSqlQueryModel();
     connOpen();
 
@@ -175,11 +183,135 @@ MainWindow::~MainWindow()
    delete qry;
    delete queueKeywords;
    delete emailTableModel;
+   delete completeHarvestTimer;
+   delete emailCountTimer;
+}
+
+void MainWindow::completeHarvesterTimer()
+{
+
+    /*******Checks harvest status******/
+//    QString harvestVal;
+//    QFile harvestFile;
+//    QString filename = getRelativePath("harvesterstatus.json");
+
+//    harvestFile.setFileName(filename);
+//    if(!harvestFile.open(QIODevice::ReadOnly | QIODevice::Text)){
+//        qDebug() << "Error opening json file in webview" << harvestFile.errorString();
+//    }
+//    harvestVal = harvestFile.readAll();
+//    harvestFile.close();
+
+
+//    QJsonDocument harvestDocument = QJsonDocument::fromJson(harvestVal.toUtf8());
+//    QJsonObject harvestjsonObject = harvestDocument.object();
+//    QString harvestResults = harvestjsonObject.value(QString("HarvestStatus")).toString();
+
+//    if(!harvestResults.isEmpty())
+//    {
+//        ui->label_Curl_Status->setText("Status: " + harvestResults );
+//    }else
+//    {
+//        ui->label_Curl_Status->setText("Status: BUSY...");
+
+//    }
+
+
+
+//    /*******Checks if harvester is complete******/
+//    QString val;
+//    QFile file;
+
+//    QString completeFileName = getRelativePath("complete.json");
+
+//    file.setFileName(completeFileName);
+//    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
+//        qDebug() << "Error opening json file in webview" << file.errorString();
+//    }
+//    val = file.readAll();
+//    file.close();
+
+//    QJsonDocument document = QJsonDocument::fromJson(val.toUtf8());
+//    QJsonDocument jsonDocument;
+//    QJsonObject jsonObject = document.object();
+//    QString completeResults = jsonObject.value(QString("COMPLETED_RESULTS")).toString();
+
+//    if(!completeResults.isEmpty())
+//    {
+//        qDebug() << "NOT EMPTY";
+//        if(completeResults == "1_URL_SELECTED_RESULTS_COMPLETED"
+//           || completeResults == "MULTI_URL_SELECTED_RESULTS_COMPLETED"
+//           || completeResults == "MULTI_URL_SELECTED_COMPLETED_USING_DEFAULT_SEARCH_OPTION"
+//           ||  completeResults == "MULTI_URL_SELECTED_ALL_LIST_COMPLETED_USING_BYPASS_OPTION")
+//        {
+//            (*emailRowStartPtr) =0;
+//            (*emailRowEndPtr) =0;
+//             webViewProcess->close();
+//             emailTableTimer->stop();
+//             completeHarvestTimer->stop();
+//             emit emitStopQueueKeywords();
+//             emit emitStopWorker();
+//             ui->label_Curl_Status->setText("Status: ");
+//             clickedStartStopButton = false;
+//             ui->pushButton_Start->setText("Start");
+//             ui->tabWidget_Harvester_Options->setTabEnabled(0, true);
+//             ui->tabWidget_Harvester_Options->setTabEnabled(1, true);
+//             ui->tabWidget_Harvester_Options->setTabEnabled(2, true);
+//             ui->tabWidget_Harvester_Options->setTabEnabled(3, true);
+//             ui->tableWidget_Proxy->setEnabled(true);
+//             ui->lineEdit_Proxy_Host->setEnabled(true);
+//             ui->lineEdit_Proxy_Port->setEnabled(true);
+//             ui->pushButton_Add_Proxy->setEnabled(true);
+//             ui->checkBox_Delete_Emails->setEnabled(true);
+//             ui->checkBox_Delete_Keywords->setEnabled(true);
+//             ui->lineEdit_keywords_search_box->setEnabled(true);
+//             ui->pushButton_Save_Emails->setEnabled(true);
+//             ui->pushButton_Load_Keyword_List->setEnabled(true);
+
+//             connOpen();
+//             QSqlQuery *qry = new QSqlQuery(mydb);
+//             if(!qry->exec("select * from crawleremails"))
+//             {
+//                 qDebug() << "Error selecting rows from crawleremails in mainwinow " << qry->lastError().text();
+//                 return;
+//             }
+//             queryModel->setQuery(*qry);
+//             QMessageBox::information(this, "Harvest Complete.", "Harvest Completed: Items Found " +QString::number(queryModel->rowCount()));
+//             delete qry;
+//             connClose();
+
+//             ui->pushButton_Start->setChecked(false);
+//             // stops user from pressing start to many times in a row, which will lead to problems
+//             ui->pushButton_Start->setEnabled(false);
+//             QTimer::singleShot(4000, this, SLOT(reEnableStartButton()));
+//             clearFiles();
+//             ui->listWidget_Log_Harvester_Status->clear();
+
+
+//        }
+//    }else
+//    {
+//        qDebug() << "EMPTY";
+
+//    }
+
 
 }
-void MainWindow::receiverEmailCount(int emailCount)
+void MainWindow::emailCount()
 {
-    //ui->label_Items_Found->setText("Items Found: " + QString::number( emailCount));
+    for (int i = 0; i<emailTableModel->rowCount(); i++)
+    {
+        if (emailTableModel->item(i) != nullptr)
+        {
+            emailListCount.prepend(emailTableModel->item(i)->text());
+        }
+    }
+   ui->label_Items_Found->setText("Items Found: " + QString::number(emailListCount.toSet().toList().size()));
+   if(!clickedStartStopButton)
+   {
+      // emailListCount.clear();
+   }
+
 }
 
 void MainWindow::receiverDisplayCurrentKeywords(QString keyword1,QString keyword2, QString keyword3, QString keyword4)
@@ -225,8 +357,8 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
 
         //check if main options are empty, our program is based around these important options
         // at least one has to be checked. (These will be empty arrays, if at least one isnt checked!)
-        if (!ui->checkBox_Google->isChecked() && !ui->checkBox_Aol->isChecked() &&
-            !ui->checkBox_Bing->isChecked())
+        if (!ui->checkBox_Google->isChecked() &&
+            !ui->checkBox_Bing->isChecked() && !ui->checkBox_Yahoo->isChecked())
         {
 
             QMessageBox::information(this, "...", "Please select at least one search engine option");
@@ -384,10 +516,12 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
                 options[0]->searchEngineOptions[1] = "http://bing.com";
             }
 
-            if (ui->checkBox_Aol->isChecked())
+            if (ui->checkBox_Yahoo->isChecked())
             {
-                options[0]->searchEngineOptions[2] = "http://aol.com";
+                options[0]->searchEngineOptions[2] = "http://yahoo.com";
             }
+
+
 
             //EMAIL OPTION
             if (ui->checkBox_Email_Gmail->isChecked())
@@ -514,26 +648,31 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
 
             //create a object of value start_harvest when we press stop
            obj.insert("StartHarvest",QJsonValue("START_HARVEST").toString());
-           file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/stopharvest.json");
+           QString stopHarvest = getRelativePath("stopharvest.json");
+
+           file.setFileName(stopHarvest);
            if(!file.open(QIODevice::WriteOnly)){
-               qDebug() << "Error opening stopharvest json file in mainwindow";
+               qDebug() << "Error opening stopharvest json.. file in mainwindow";
                return;
            }
            jsonDocument.setObject(obj);
            file.write(jsonDocument.toJson());
            file.close();
 
-           // QProcess *proc = new QProcess(this);
             QStringList args;
-            webViewProcess->start("C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/WebView.exe",args);
-            QString webViewResult = webViewProcess->readAllStandardOutput();
-            qDebug() <<"WebView Process Error String-> " << webViewProcess->errorString();
-            qDebug() << "WebView Process Results- > " << webViewResult;
+
+            webViewProcess->start("C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/WebView.exe",args);
+          // webViewProcess->start(QCoreApplication::applicationDirPath()+ "/resources/webview/debug/"+ "WebView.exe",args);
+
+           // QString webViewResult = webViewProcess->readAllStandardOutput();
+           // qDebug() <<"WebView Process Error String-> " << webViewProcess->errorString();
+           // qDebug() << "WebView Process Results- > " << webViewResult;
 
             //serverProcess->start("C:/Users/ace/Documents/QT_Projects/WebViewServer/build-Server-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/Server.exe",args);
            // QString serverResult = serverProcess->readAllStandardOutput();
            // qDebug() <<"Server Process Error String-> " << serverProcess->errorString();
            // qDebug() << "Server Process Results- > " <<serverResult;
+
 
             ui->label_Curl_Status->setText("Status: Starting...");
             ui->label_Current_Keyword->setText("Current Keyword: ");
@@ -562,6 +701,7 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
 
             receiverParameters();
             emailTableTimer->start(5000);
+            completeHarvestTimer->start(5000);
             // initialize email table -- checks to see if emails are in tabl
 
             // stops user from pressing start to many times in a row, which will lead to problems
@@ -591,13 +731,18 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
 
     if (!checked) {
 
+        ui->listWidget_Log_Harvester_Status->clear();
        (*emailRowStartPtr) =0;
        (*emailRowEndPtr) =0;
         webViewProcess->close();
         emailTableTimer->stop();
+        completeHarvestTimer->stop();
          //create a object of value cancel_harvest when we press stop
         obj.insert("StartHarvest",QJsonValue("CANCEL_HARVEST").toString());
-        file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/stopharvest.json");
+        QDir dir("/resources");
+        QString filename = getRelativePath("stopharvest.json");
+
+        file.setFileName(filename);
         if(!file.open(QIODevice::WriteOnly)){
             qDebug() << "Error opening stopharvest json file in mainwindow";
             return;
@@ -625,6 +770,7 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
         ui->pushButton_Save_Emails->setEnabled(true);
         ui->pushButton_Load_Keyword_List->setEnabled(true);
 
+        clearFiles();
 
         // stops user from pressing start to many times in a row, which will lead to problems
        ui->pushButton_Start->setEnabled(false);
@@ -741,25 +887,33 @@ void MainWindow::on_pushButton_Load_Keyword_List_clicked()
 
 
                          QFile multi1KeywordListFile;
-                         multi1KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi1keywordList.txt");
+                         QString multi1 = getRelativePath("multi1keywordList.txt");
+
+                         multi1KeywordListFile.setFileName(multi1);
                          if(!multi1KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
                              qDebug() << "Error opening multi keyword list file1 in mainwindow";
                              return;
                          }
                          QFile multi2KeywordListFile;
-                         multi2KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi2keywordList.txt");
+                         QString multi2 = getRelativePath("multi2keywordList.txt");
+
+                         multi2KeywordListFile.setFileName(multi2);
                          if(!multi2KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
                              qDebug() << "Error opening multi keyword list file2 in mainwindow";
                              return;
                          }
                          QFile multi3KeywordListFile;
-                         multi3KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi3keywordList.txt");
+                         QString multi3 = getRelativePath("multi3keywordList.txt");
+
+                         multi3KeywordListFile.setFileName(multi3);
                          if(!multi3KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
                              qDebug() << "Error opening multi keyword list file3 in mainwindow";
                              return;
                          }
                          QFile multi4KeywordListFile;
-                         multi4KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi4keywordList.txt");
+                         QString multi4 = getRelativePath("multi4keywordList.txt");
+
+                         multi4KeywordListFile.setFileName(multi4);
                          if(!multi4KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
                              qDebug() << "Error opening multi keyword list file4 in mainwindow";
                              return;
@@ -840,7 +994,9 @@ void MainWindow::on_pushButton_Load_Keyword_List_clicked()
 
 
                          QFile multi1KeywordListFile;
-                         multi1KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi1keywordList.txt");
+                         QString multi1 = getRelativePath("multi1keywordList.txt");
+
+                         multi1KeywordListFile.setFileName(multi1);
                          if(!multi1KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
                              qDebug() << "Error opening multi keyword list file1 in mainwindow";
                              return;
@@ -924,7 +1080,7 @@ void MainWindow::receiverParameters()
 
 
 
-    if (ui->checkBox_Aol->isChecked())
+    if (ui->checkBox_Yahoo->isChecked())
     {
         vectorSearchEngineOptions.resize(3);
         vectorSearchEngineOptions.push_back(options[0]->searchEngineOptions[2]);
@@ -1163,7 +1319,10 @@ void MainWindow::receiverParameters()
 
    // qDebug() << obj;
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/params.json");
+    QString filename = getRelativePath("params.json");
+
+
+    file.setFileName(filename);
     if(!file.open(QIODevice::WriteOnly)){
         qDebug() << "Error opening json file in mainwindow";
         return;
@@ -1215,25 +1374,33 @@ void MainWindow::on_radioButton_Parse_Multi_URL_clicked(bool checked)
         ui->radioButton_Parse_1_URL->setChecked(false);
 
         QFile multi1KeywordListFile;
-        multi1KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi1keywordList.txt");
+        QString multi1 = getRelativePath("multi1keywordList.txt");
+
+        multi1KeywordListFile.setFileName(multi1);
         if(!multi1KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
             qDebug() << "Error opening multi keyword list file1 in mainwindow";
             return;
         }
         QFile multi2KeywordListFile;
-        multi2KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi2keywordList.txt");
+        QString multi2 = getRelativePath("multi2keywordList.txt");
+
+        multi2KeywordListFile.setFileName(multi2);
         if(!multi2KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
             qDebug() << "Error opening multi keyword list file2 in mainwindow";
             return;
         }
         QFile multi3KeywordListFile;
-        multi3KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi3keywordList.txt");
+        QString multi3 = getRelativePath("multi3keywordList.txt");
+
+        multi3KeywordListFile.setFileName(multi3);
         if(!multi3KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
             qDebug() << "Error opening multi keyword list file3 in mainwindow";
             return;
         }
         QFile multi4KeywordListFile;
-        multi4KeywordListFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi4keywordList.txt");
+        QString multi4 = getRelativePath("multi4keywordList.txt");
+
+        multi4KeywordListFile.setFileName(multi4);
         if(!multi4KeywordListFile.open(QIODevice::WriteOnly | QIODevice::Text)){
             qDebug() << "Error opening multi keyword list file4 in mainwindow";
             return;
@@ -1440,8 +1607,6 @@ void MainWindow::on_pushButton_Add_Proxy_clicked()
 
 }
 
-
-
 void MainWindow::on_pushButton_Next_Email_Pagination_clicked()
 {
 
@@ -1569,7 +1734,6 @@ void MainWindow::on_pushButton_Previous_Email_Pagination_clicked()
 
 }
 
-
 void MainWindow::receiverEmailTableModel(QSqlQueryModel * queryModel)
 {
     ui->tableView_Emails->setModel(queryModel);
@@ -1582,7 +1746,7 @@ void MainWindow::populateEmailTable() {
     QSqlQuery *qry = new QSqlQuery(mydb);
     if(!qry->exec("select * from crawleremails"))
     {
-        qDebug() << "Error selecting rows from crawleremails in server " << qry->lastError().text();
+        qDebug() << "Error selecting rows from crawleremails in mainwindow populatetable " << qry->lastError().text();
         return;
     }
     int fieldNo = qry->record().indexOf("email");
@@ -1593,7 +1757,6 @@ void MainWindow::populateEmailTable() {
         //qDebug() << qry->value(fieldNo).toString();
         QStandardItem *item = new QStandardItem(qry->value(fieldNo).toString());
         emailTableModel->setItem(num, 0, item);
-        num++;
         QEventLoop loop;
         QTimer::singleShot(1000,&loop,SLOT(quit()));
         loop.exec();
@@ -1606,15 +1769,14 @@ void MainWindow::populateEmailTable() {
         {
             break;
         }
-        ui->label_Items_Found->setText("Items Found: " + QString::number(num));
+        num++;
     }
+
     ui->tableView_Emails->setModel(emailTableModel);
     ui->tableView_Emails->show();
 
     delete qry;
     connClose();
-
-
 
 }
 
@@ -1656,7 +1818,9 @@ void MainWindow::recieverProxyTableSelection(const QItemSelection &selected, con
 void MainWindow::connOpen()
 {
     mydb = QSqlDatabase::addDatabase("QSQLITE");
-    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+    QString dbPath = getRelativePath("emailtest.db");
+
+    mydb.setDatabaseName(dbPath);
     if(!mydb.open())
     {
         qDebug() << "Error connecting to database";
@@ -1723,6 +1887,7 @@ void MainWindow::deleteEmailsListTable()
     ui->tableView_Emails->resizeRowsToContents();
     connClose();
     emailTableModel->clear();
+    emailListCount.clear();
     delete qry;
     emit emitRemoveEmailList();
 
@@ -1781,14 +1946,10 @@ void MainWindow::on_checkBox_Delete_Keywords_clicked()
                 !fileList->isEmpty() && !multi1KeywordList.isEmpty() && !multi2KeywordList.isEmpty()))
         {
 
-
             ui->checkBox_Delete_Emails->setEnabled(false);
             ui->pushButton_Start->setDisabled(true);
             ui->pushButton_Load_Keyword_List->setDisabled(true);
             ui->checkBox_Delete_Keywords->setDisabled(true);
-
-
-
             QTimer::singleShot(10, this, SLOT(deleteKeyordsListTable()));
             ui->label_Items_Found->setText("Items Found: ");
 
@@ -1885,4 +2046,202 @@ void MainWindow::receiverLogHarvesterStatus(QString logStatus)
         }
         (*logStatusCounterPtr) += 1;
     }
+}
+
+void MainWindow::clearFiles()
+{
+    QString emptyString;
+
+    // cleans complete json file
+    QFile completeFile;
+
+    QString completeFileName = getRelativePath("complete.json");
+
+
+    completeFile.setFileName(completeFileName);
+
+    if(!completeFile.open(QIODevice::WriteOnly | QIODevice::Truncate)){
+        qDebug() << "Error opening json file in mainwindow";
+        return;
+    }
+    QTextStream completeFileStream(&completeFile);
+    completeFileStream << emptyString;
+    completeFile.close();
+
+    // cleans httpStatus log file
+    QFile httpStatusLogFile;
+    QString httpStatusFileName = getRelativePath("httpstatus.json");
+
+
+    httpStatusLogFile.setFileName(httpStatusFileName);
+    if(!httpStatusLogFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qDebug() << "Error opening complete json file in mainwinodw " << httpStatusLogFile.errorString();
+        return;
+    }
+    QTextStream httpStatusLogStream(&httpStatusLogFile);
+    httpStatusLogStream << emptyString;
+    httpStatusLogFile.close();
+
+
+
+    // cleans webview log file
+    QFile webViewLogFile;
+    QString logFileName= getRelativePath(".log");
+
+
+    webViewLogFile.setFileName(logFileName);
+    if(!webViewLogFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qDebug() << "Error opening webview json file in mainwinodw " << webViewLogFile.errorString();
+        return;
+    }
+    QTextStream webViewLogFileStream(&webViewLogFile);
+    webViewLogFileStream << emptyString;
+    webViewLogFile.close();
+
+    // cleans currentKeywords file
+    QFile currentKeywordsFile;
+    QString currentKeywordsFileName = getRelativePath("currentkeywords.json");
+
+
+    currentKeywordsFile.setFileName(currentKeywordsFileName);
+    if(!currentKeywordsFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qDebug() << "Error opening current keywords json file in mainwinodw " << currentKeywordsFile.errorString();
+        return;
+    }
+    QTextStream currentKeywordsFileStream(&currentKeywordsFile);
+    currentKeywordsFileStream << emptyString;
+    currentKeywordsFile.close();
+
+
+    // cleans params file
+    QFile paramsFile;
+    QString paramsFileName= getRelativePath("params.json");
+
+    paramsFile.setFileName(paramsFileName);
+    if(!paramsFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qDebug() << "Error opening params json file in mainwinodw " << paramsFile.errorString();
+        return;
+    }
+    QTextStream paramsFileStream(&paramsFile);
+    paramsFileStream << emptyString;
+    paramsFile.close();
+
+
+    // cleans harvest status file
+    QFile harvesterStatusFile;
+    QString harvesterStatusFileName= getRelativePath("harvesterstatus.json");
+
+
+    harvesterStatusFile.setFileName(harvesterStatusFileName);
+    if(!harvesterStatusFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qDebug() << "Error opening params json file in mainwinodw " << harvesterStatusFile.errorString();
+        return;
+    }
+    QTextStream harvesterStatusFileStream(&harvesterStatusFile);
+    harvesterStatusFileStream << emptyString;
+    harvesterStatusFile.close();
+}
+
+void MainWindow::on_pushButton_Save_Emails_clicked()
+{
+    QString savedEmails;
+    QStringList savedEmailsList;
+    QString fileName = QFileDialog::getSaveFileName(this, "Save Emails", "", "Text files (*.txt)");
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+    else
+    {
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly))
+        {
+            QMessageBox::information(this, "unable to open file", file.errorString());
+            return;
+        }
+        QTextStream outStream(&file);
+
+        for (int i = 0; i < setEmailList.size(); i++)
+        {
+            savedEmails = setEmailList.value(i);
+            savedEmailsList << savedEmails.split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
+            outStream << savedEmailsList.value(i) << "\n";
+        }
+
+        file.close();
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+
+
+
+        if(clickedStartStopButton == true || clickedStartStopButton ==false)
+        {
+            QMessageBox::StandardButton resBtn = QMessageBox::question( this, "Beat Crawler",
+                                                                        "Are you sure you want to exit?\n",
+                                                                        QMessageBox::Cancel | QMessageBox::No | QMessageBox::Yes,
+                                                                        QMessageBox::Yes);
+
+            if (resBtn != QMessageBox::Yes)
+            {
+                event->ignore();
+            }
+            else
+            {
+
+                (*emailRowStartPtr) =0;
+                (*emailRowEndPtr) =0;
+                webViewProcess->close();
+                emit emitStopQueueKeywords();
+                emit emitStopWorker();
+                clearFiles();
+
+                connOpen();
+                QSqlQuery *qry = new QSqlQuery(mydb);
+                if(!qry->exec("delete from crawleremails"))
+                {
+                    qDebug() << "Error deleting emails from crawleremails " << qry->lastError().text();
+                    return;
+                }
+
+                queryModel->setQuery(*qry);
+                connClose();
+                delete qry;
+                QProcess::execute("taskkill /im BeatCrawler.exe /f");
+                QProcess::execute("taskkill /im WebView.exe /f");
+
+                event->accept();
+
+            }
+
+        }
+        else
+        {
+
+        }
+
+}
+
+QString MainWindow::getRelativePath(QString fileName)
+{
+   // QDir dir("resources");
+   // QString filename = dir.relativeFilePath(fileName);
+   // return fileName;
+   // qDebug()<<  "r--> "<< QDir::current().path() +"/resources/"+ fileName;
+    //qDebug() <<  "a--> " << QDir::current().cd(QDir::current().path() +QString("/resources/"));
+   // qDebug() << QCoreApplication::applicationDirPath()+ "/resources/";
+    //C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/resources/
+    //return QCoreApplication::applicationDirPath()+ "/resources/"+ fileName;
+  #ifdef DEBUG_APP
+    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+     #else
+    return "/resources/" + fileName;
+  #endif
 }

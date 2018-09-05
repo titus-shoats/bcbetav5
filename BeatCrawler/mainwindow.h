@@ -28,6 +28,8 @@
 #include <QSqlQueryModel>
 #include "queuekeywords.h"
 #include <QMutex>
+#include <QCloseEvent>
+#include <config.h>
 
 namespace Ui {
     class MainWindow;
@@ -48,6 +50,9 @@ public:
     void createMultiKeywordList();
     void connOpen();
     void connClose();
+    void clearFiles();
+    void closeEvent(QCloseEvent *event);
+    QString getRelativePath(QString fileName);
 
 private slots:
 
@@ -61,11 +66,13 @@ private slots:
     void on_checkBox_Delete_Emails_clicked();
     void on_checkBox_Delete_Keywords_clicked();
     void on_pushButton_Queue_Keywords_Table_clicked();
+    void on_pushButton_Save_Emails_clicked();
 
 public slots:
     void reEnableStartButton();
     void recieverProxyTableSelection(const QItemSelection &selected, const QItemSelection &deselected);
     void populateEmailTable();
+    void completeHarvesterTimer();
     void deleteEmailsListTable();
     void receiverRemoveEmailList();
     void receiverEnableDeleteEmailCheckBox();
@@ -74,7 +81,7 @@ public slots:
     void receiverRemoveKeywordList();
     void receiverDisplayCurrentKeywords(QString keyword1,QString keyword2, QString keyword3, QString keyword4);
     void receiverDisplayCurrentKeyword(QString keyword);
-    void receiverEmailCount(int emailCount);
+    void emailCount();
     void receiverEmailTableModel(QSqlQueryModel *queryModel);
     void receiverLogHarvesterStatus(QString logStatus);
 
@@ -102,7 +109,10 @@ private:
     Options *opt;
     static QStringList * emails;
     QTimer *  emailTableTimer;
+    QTimer *  completeHarvestTimer;
+
     QTimer *keywordsQueueTableTimer;
+    QTimer * emailCountTimer;
     int *emailOptionsNumPtr;
     int *searchEngineNumPtr;
     int *searchEngineNumPtr1[3];
@@ -207,8 +217,8 @@ private:
     QMutex mutex;
     QueueKeywords *queueKeywords;
     QList<QString>removeDuplicatesFileList;
-
-
+    int emailCountNum;
+    QStringList emailListCount;
 
 
 };

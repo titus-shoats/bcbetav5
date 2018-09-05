@@ -23,24 +23,42 @@ WebView::WebView(QWidget *parent)
 
     httpStatusNum = 0;
     httpStatusPtr =&httpStatusNum;
-   // connect(&this->worker,&WebView::emitWebViewLog,this,&Worker::receiverWebViewLog);
-   connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
+    connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
 
-   initProxyListSettings();
-   replyUrl = new QString();
-
+    initProxyListSettings();
+    replyUrl = new QString();
 }
 
 WebView::~WebView(){
+
     delete replyUrl;
     emailListFile->close();
     delete emailListFile;
     delete emailList;
     delete readEmailFile;
     delete proxies;
-    //connClose();
+    connClose();
+    harvestStatus("HARVEST_ABORTED");
+
 }
 
+void WebView::harvestStatus(QString status)
+{
+    QFile harvestStatusFile;
+    QJsonDocument harvestStatusDocument;
+    QJsonObject  harvestStatusObject;
+    harvestStatusObject.insert("HarvestStatus",QJsonValue(status).toString());
+    QString fileName= getRelativePath("harvesterstatus.json");
+
+    harvestStatusFile.setFileName(fileName);
+    if(!harvestStatusFile.open(QIODevice::WriteOnly | QIODevice::Text)){
+        qDebug() << "Error opening  harvestStatusFile in webview..... " << harvestStatusFile.errorString();
+    }
+    harvestStatusDocument.setObject(harvestStatusObject);
+    harvestStatusFile.write(harvestStatusDocument.toJson());
+    harvestStatusFile.close();
+
+}
 void WebView::openEmailListFile(QFile * emailListFile){
 
 //    emailListFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailList.txt");
@@ -86,9 +104,11 @@ void WebView::initProxyListSettings()
     proxyServersJson = new QList<QString>();
     QString val;
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/params.json");
+    QString fileName= getRelativePath("params.json");
+
+    file.setFileName(fileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        qDebug() << "Error opening json file in webview" << file.errorString();
+        qDebug() << "Error opening initProxyListSettings file in webview....." << file.errorString();
     }
     val = file.readAll();
     file.close();
@@ -320,9 +340,9 @@ void WebView::view1Page(QWebPage *page)
             QStringList words;
             QString word;
             int num = 0;
-          //  connOpen();
-            mydb = QSqlDatabase::addDatabase("QSQLITE");
-            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            connOpen();
+           // mydb = QSqlDatabase::addDatabase("QSQLITE");
+          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
             if(!mydb.open())
             {
                 qDebug() << "Error connecting to database";
@@ -395,18 +415,20 @@ void WebView::view1HttpResponseFinished(QNetworkReply * reply)
 
     if(httpStatusCode <200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage1ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
     if(httpStatusCode ==200)
     {
+        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
         viewPage1ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
-
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage1ProxyRotate = true;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
@@ -584,9 +606,9 @@ void WebView::view2Page(QWebPage *page)
             QStringList words;
             QString word;
             int num = 0;
-           // connOpen();
-            mydb = QSqlDatabase::addDatabase("QSQLITE");
-            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            connOpen();
+          //  mydb = QSqlDatabase::addDatabase("QSQLITE");
+          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
             if(!mydb.open())
             {
                 qDebug() << "Error connecting to database";
@@ -660,17 +682,20 @@ void WebView::view2HttpResponseFinished(QNetworkReply * reply)
 
     if(httpStatusCode <200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage2ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
     if(httpStatusCode ==200)
     {
+        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
         viewPage2ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage2ProxyRotate = true;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
@@ -738,9 +763,9 @@ void WebView::view3Page(QWebPage *page){
             QStringList words;
             QString word;
             int num = 0;
-           // connOpen();
-            mydb = QSqlDatabase::addDatabase("QSQLITE");
-            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            connOpen();
+           // mydb = QSqlDatabase::addDatabase("QSQLITE");
+          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
             if(!mydb.open())
             {
                 qDebug() << "Error connecting to database";
@@ -813,17 +838,20 @@ void WebView::view3HttpResponseFinished(QNetworkReply * reply)
 
     if(httpStatusCode <200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage3ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
 
     if(httpStatusCode ==200)
     {
+        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
         viewPage3ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage3ProxyRotate = true;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
@@ -889,9 +917,9 @@ void WebView::view4Page(QWebPage *page){
             QStringList words;
             QString word;
             int num = 0;
-            //connOpen();
-            mydb = QSqlDatabase::addDatabase("QSQLITE");
-            mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+            connOpen();
+           // mydb = QSqlDatabase::addDatabase("QSQLITE");
+           // mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
             if(!mydb.open())
             {
                 qDebug() << "Error connecting to database";
@@ -966,6 +994,7 @@ void WebView::view4HttpResponseFinished(QNetworkReply * reply)
     if(httpStatusCode <200)
     {
 
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage4ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)
                             +" "+ QString(url.host()+url.path()+url.query()));
@@ -973,11 +1002,13 @@ void WebView::view4HttpResponseFinished(QNetworkReply * reply)
 
     if(httpStatusCode ==200)
     {
+        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
         viewPage4ProxyRotate = false;
         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
     }
     if(httpStatusCode> 200)
     {
+        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
         viewPage4ProxyRotate = true;
         emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
     }
@@ -1082,7 +1113,9 @@ void WebView::insertEmailsJson()
 void WebView::connOpen()
 {
     mydb = QSqlDatabase::addDatabase("QSQLITE");
-    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+    QString dbFileName = getRelativePath("emailtest.db");
+
+    mydb.setDatabaseName(dbFileName);
     if(!mydb.open())
     {
         qDebug() << "Error connecting to database";
@@ -1095,6 +1128,18 @@ void WebView::connOpen()
 
 void WebView::connClose()
 {
-  //  mydb.removeDatabase(QSqlDatabase::database().connectionName());
-   // mydb.close();
+    mydb.removeDatabase(QSqlDatabase::database().connectionName());
+    mydb.close();
+
+}
+
+QString WebView::getRelativePath(QString fileName)
+{
+//    QDir tempCurrDir  = QDir::current();
+//    tempCurrDir.cdUp();
+//    QString root = tempCurrDir.path();
+//    return root + "/" +fileName;
+
+    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
 }

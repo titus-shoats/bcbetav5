@@ -32,7 +32,8 @@ HEADERS += \
         mainwindow.h \
     options.h \
     worker.h \
-    queuekeywords.h
+    queuekeywords.h \
+    config.h
 
 FORMS += \
         mainwindow.ui \

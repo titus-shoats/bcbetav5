@@ -28,10 +28,11 @@ Worker::~Worker()
    delete socket;
 }
 
-void Worker::openhttpStatusFile(QFile * httpStatusFile) const
+void Worker::openhttpStatusFile(QFile * httpStatusFile)
 {
 
-    httpStatusFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/httpstatus.log");
+    QString httpStatusFileName = getRelativePath("httpstatus.log");
+    httpStatusFile->setFileName(httpStatusFileName);
     if(! httpStatusFile->open(QIODevice::ReadOnly | QIODevice::Text)){
         qDebug() << "Error opening keyword httpstatus.log " <<  httpStatusFile->errorString();
         return;
@@ -42,7 +43,9 @@ void Worker::openCurrentKeywordJsonFile()
 {
     QString val;
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/currentkeywords.json");
+    QString currentKeywordsFileName = getRelativePath("currentkeywords.json");
+
+    file.setFileName(currentKeywordsFileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
         qDebug() << "Error opening json file in beat crawler worker";
     }
@@ -230,4 +233,16 @@ void Worker::readModel()
     qDebug() << currentString;
 
 
+}
+QString Worker::getRelativePath(QString fileName)
+{
+   // QDir dir("resources");
+   // QString filename = dir.relativeFilePath(fileName);
+   // return fileName;
+   // qDebug()<<  "r--> "<< QDir::current().path() +"/resources/"+ fileName;
+    //qDebug() <<  "a--> " << QDir::current().cd(QDir::current().path() +QString("/resources/"));
+   // qDebug() << QCoreApplication::applicationDirPath()+ "/resources/";
+    //C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/resources/
+    //return QCoreApplication::applicationDirPath()+ "/resources/"+ fileName;
+    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
 }

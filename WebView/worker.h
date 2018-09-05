@@ -55,56 +55,26 @@ class Worker : public QObject
 public:
     explicit Worker(QObject *parent = 0);
     ~Worker();
-    /**
-    * @brief Requests the process to start
-    *
-    * It is thread safe as it uses #mutex to protect access to #_working variable.
-    */
-    void requestWork();
-    /**
-    * @brief Requests the process to abort
-    *
-    * It is thread safe as it uses #mutex to protect access to #_abort variable.
-    */
-    void abort();
 
-    static void requestParsedEmailList(QString);
-    void curlProcess1(const char *urls[], QString threadName);
-    void doWork1();
-
-    void receiverReadFile(QString fileName,bool isMultiSelected);
-    void test(QString name);
     void startProcess();
     void startHarvest(QVector<QString>vectorSearchEngineOptions,
                     QVector<QString>vectorEmailOptions,QVector<QString>vectorSocialNetworks2,
                       QString lineEdit_keywords_search_box, QList <QString> *proxyServers,
                       QList<int>timerOptions, QList<QString>otherOptions,int isFileListUploaded);
     void initHarvest();
-    void myLogFile(QString logMessage,int logInt =NULL);
+    void myLogFile_(QString logMessage,int logInt =NULL);
+    void myLogFile();
+    void harvestStatus(QString status);
+    QString getRelativePath(QString fileName);
 
 
 private:
-    /**
-    * @brief Process is aborted when @em true
-    */
-    bool _abort;
-    /**
-    * @brief @em true when Worker is doing work
-    */
-    bool _working;
-    /**
-    * @brief Protects access to #_abort
-    */
-    QMutex mutex;
     QString *proxies;
     int *workerCounterPtr;
     int workerCounterNum;
 
     int *proxyServerCounterPtr;
     int proxyServerCounterNum;
-
-    // increment proxy at cetain number of http request
-    int incrementProxy = 5;
 
     bool isProxyEmpty;
     bool canProxyCounterIncrement;
@@ -182,7 +152,6 @@ private:
     QString multiURLOptionString;
     QString *multiOptionOneURL;
     QString multiOptionOneURLString;
-    QStringList logHarvesterStatus;
     QTimer *timer;
     bool finishReadingMulti1KeywordFile;
     bool finishReadingMulti2KeywordFile;
@@ -197,7 +166,7 @@ private:
     bool isMulti3KeywordListComplete;
     bool isMulti4KeywordListComplete;
     QStringList httpStatusList;
-
+    bool isResultsComplete;
 
 signals:
     /**
@@ -225,13 +194,8 @@ signals:
 
     void emitKeywordQueue();
     void senderCurlResponseInfo(QString);
-    void emitDataTest(QString s);
     void emitFinishSenderHarvestResults(QString results);
-    void emitfinishReadingKeywordFile();
-    void emitsenderEnableDeleteKeywordCheckBox();
-    void emitsenderEnableDeleteEmailCheckBox();
     void emitsendCurrentKeyword(QString keyword);
-    void emitSenderLogHarvesterStatus(QString logStatus);
     void emitMultiEmailList(QString emails);
     void emitLoopWebViewParams(QString params);
     void emitMultiLoopWebViewParams(QString searchEngineParamMulti1,QString searchEngineParamMulti2,
@@ -240,9 +204,6 @@ signals:
 public slots:
 
     void stop();
-    void receiverRemoveThreadFileList();
-    void readEmailFile();
-    void receiverRemoveThreadEmailList();
     void receiverWebViewLog(QString logMesssage);
 
 };

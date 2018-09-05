@@ -16,6 +16,8 @@
 #include <QSqlQuery>
 #include <QSqlQueryModel>
 #include <QLocalSocket>
+#include <config.h>
+
 
 
 class Worker: public QObject
@@ -25,12 +27,14 @@ public:
     explicit Worker(QObject *parent =0);
     ~Worker();
     void getCurrentKeywords() ;
-    void openhttpStatusFile(QFile * httpStatusFile) const;
+    void openhttpStatusFile(QFile * httpStatusFile);
     void openCurrentKeywordJsonFile();
     void connOpen();
     void connClose();
     void getEmailCount();
     void testTimer();
+    QString getRelativePath(QString fileName);
+
 
 
 private:
@@ -60,7 +64,6 @@ signals:
     void emitEmailList(QString emailList);
     void emitDisplayCurrentKeywords(QString keyword1,QString keyword2, QString keyword3, QString keyword4);
     void emitDisplayCurrentKeyword(QString keyword);
-    void emitEmailCount(int emailCount);
     void emitKeywordsQueueTable();
     void emitEmailTableModel(QSqlQueryModel *queryModel);
     void emitLogHarvesterStatus(QString logStatus);

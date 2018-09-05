@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>662</width>
-    <height>456</height>
+    <height>450</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -254,25 +254,12 @@
           <x>10</x>
           <y>10</y>
           <width>191</width>
-          <height>161</height>
+          <height>101</height>
          </rect>
         </property>
         <property name="title">
          <string>Parse selected Search Engines Only</string>
         </property>
-        <widget class="QCheckBox" name="checkBox_DuckDuckGo">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>130</y>
-           <width>81</width>
-           <height>19</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>duckduckgo</string>
-         </property>
-        </widget>
         <widget class="QCheckBox" name="checkBox_Google">
          <property name="geometry">
           <rect>
@@ -284,19 +271,6 @@
          </property>
          <property name="text">
           <string>google</string>
-         </property>
-        </widget>
-        <widget class="QCheckBox" name="checkBox_Ask">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>90</y>
-           <width>72</width>
-           <height>19</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>ask</string>
          </property>
         </widget>
         <widget class="QCheckBox" name="checkBox_Bing">
@@ -312,7 +286,7 @@
           <string>bing</string>
          </property>
         </widget>
-        <widget class="QCheckBox" name="checkBox_Aol">
+        <widget class="QCheckBox" name="checkBox_Yahoo">
          <property name="geometry">
           <rect>
            <x>10</x>
@@ -322,20 +296,7 @@
           </rect>
          </property>
          <property name="text">
-          <string>aol</string>
-         </property>
-        </widget>
-        <widget class="QCheckBox" name="checkBox_Search">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>110</y>
-           <width>72</width>
-           <height>19</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>search</string>
+          <string>yahoo</string>
          </property>
         </widget>
        </widget>
@@ -787,11 +748,11 @@
            <x>10</x>
            <y>30</y>
            <width>161</width>
-           <height>17</height>
+           <height>16</height>
           </rect>
          </property>
          <property name="text">
-          <string>Parse 1 URL During Harvest</string>
+          <string>Parse  URL During Harvest</string>
          </property>
          <property name="checked">
           <bool>true</bool>

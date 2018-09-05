@@ -45,22 +45,23 @@ Worker::Worker(QObject *parent) :
     multi4CurrentKeywordPtrNum = 0;
     multi4CurrentKeywordPtr = &multi4CurrentKeywordPtrNum;
 
-
-     stopHarvestLoop = false;
+    stopHarvestLoop = false;
     multiURLOptionString = "";
     multiURLOption = reinterpret_cast<QString *>(&multiURLOptionString);
 
     multiOptionOneURLString = "";
     multiOptionOneURL = reinterpret_cast<QString *>(&multiOptionOneURLString);
+    QString logFileName = getRelativePath(".log");
 
-   logFile = new QFile("C:/Users/ace/Documents/QT_Projects/WebView/WebView/.log");
+   logFile = new QFile(logFileName);
    if (!logFile->open(QIODevice::WriteOnly))
    {
        qDebug() << "unable to open file"<< logFile->errorString();
        return;
    }
 
-   httpStatusFile = new QFile("C:/Users/ace/Documents/QT_Projects/WebView/WebView/httpstatus.log");
+   QString httpStatusLogFileName = getRelativePath("httpstatus.log");
+   httpStatusFile = new QFile(httpStatusLogFileName);
    if (!httpStatusFile->open(QIODevice::WriteOnly))
    {
        qDebug() << "unable to open file"<< httpStatusFile->errorString();
@@ -86,6 +87,7 @@ Worker::Worker(QObject *parent) :
     searchEnginePaginationCounterPtr = &searchEnginePaginationCounterNum;
     deleteKeywordCheckBoxTimer = new QTimer();
     logMessage = new QStringList();
+    isResultsComplete =false;
 
     //connect(&this->myThread, &Thread::emitEmailList, this, &Worker::receiverEmails);
     //connect(&this->myThread1, &Thread1::emitEmailList, this, &Worker::receiverEmails);
@@ -108,130 +110,13 @@ Worker::~Worker()
     httpStatusFile->close();
     delete httpStatusFile;
 
+    harvestStatus("HARVEST_ABORTED");
+
 }
-
-
-void Worker::requestWork()
-{
-    //emit workRequested();
-}
-
-void Worker::abort() {}
 
 void Worker::stop()
 {
      stopHarvestLoop = true;
-}
-
-
-void Worker::receiverRemoveThreadEmailList()
-{
-    parsedEmailList1.clear();
-    for (;;) {
-        QEventLoop loop;
-        QTimer::singleShot(5000, &loop, SLOT(quit()));
-        loop.exec();
-        if (parsedEmailList1.isEmpty()) {
-            emit emitsenderEnableDeleteEmailCheckBox();
-            break;
-        }
-    }
-}
-
-
-void Worker::receiverRemoveThreadFileList()
-{
-    fileList->clear();
-    multi1KeywordList.clear();
-    multi2KeywordList.clear();
-    for (;;) {
-        QEventLoop loop;
-        QTimer::singleShot(5000, &loop, SLOT(quit()));
-        loop.exec();
-        /**********
-        Emit signal if fileList is empty or both multi keyword list are empty
-        ********/
-        if (fileList->isEmpty()) {
-            emit emitsenderEnableDeleteKeywordCheckBox();
-            break;
-        }
-        if (multi1KeywordList.isEmpty() && multi2KeywordList.isEmpty()) {
-            emit emitsenderEnableDeleteKeywordCheckBox();
-            break;
-        }
-    }
-}
-
-void Worker::receiverReadFile(QString fileName, bool isMultiSelected)
-{
-    fileList->clear();
-    multi1KeywordList.clear();
-    multi2KeywordList.clear();
-    QFile file(fileName);
-    QFileInfo fi(file.fileName());
-    QString fileExt = fi.completeSuffix();
-    QString strings;
-    QString str;
-
-    if (!file.open(QFile::ReadOnly))
-    {
-        qDebug() << "ERROR OPENING FILE" << file.error();
-    }
-
-
-    QTextStream ts(&file);
-    while (!ts.atEnd())
-    {
-        str = ts.readLine();
-        *fileList << str;
-        //qDebug() << *fileList;
-
-    }
-
-    if (isMultiSelected)
-    {
-        // loop through main keyword list to get two seperate list, if multi option is checked
-        for (int i = 0; i < fileList->size(); i++)
-        {
-            // if j is a even int, put keywords into this list
-            if (i % 2 == 0)
-            {
-                multi1KeywordList << fileList->value(i);
-                //qDebug() << "LIST 1--->" << multi1KeywordList;
-            }
-            // else put odd keywords into a new list
-            else
-            {
-                multi2KeywordList << fileList->value(i);
-                //qDebug() << "LIST 2--->" << multi2KeywordList;
-            }
-        }
-    }
-
-    file.close();
-    // send signal to enable checkboxes  and keyword file load button
-    //QThread::currentThread()->msleep(2000);
-    emit emitfinishReadingKeywordFile();
-
-}
-
-void Worker::readEmailFile() {
-    QFile file("emails.txt");
-    QString strings;
-    QString str;
-    qDebug() << "Readig file";
-    if (!file.open(QFile::ReadOnly))
-    {
-        qDebug() << "ERROR OPENING EMAIL FILE" << file.error();
-    }
-
-
-    QTextStream ts(&file);
-    while (!ts.atEnd())
-    {
-        str = ts.readLine();
-    }
-    file.close();
 }
 
 void Worker::initHarvest()
@@ -248,15 +133,20 @@ void Worker::initHarvest()
     QList<QString>otherOptionsJson;
     QList <QString> *proxyServersJson;
     proxyServersJson = new QList<QString>();
+
+
+
     QString val;
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/params.json");
+    QString paramsJsonFile = getRelativePath("params.json");
+
+    file.setFileName(paramsJsonFile);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        qDebug() << "Error opening json file in webview";
+        qDebug() << "Error opening json file in webview " <<  file.errorString();
     }
     val = file.readAll();
-
     file.close();
+
 
 
     QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
@@ -326,7 +216,7 @@ void Worker::initHarvest()
 
     startHarvest(vectorSearchOptions,vectorEmailOptions,vectorSocailNetworkOptions,
                lineEditKeyword,proxyServersJson,timerOptionsJson,otherOptionsJson,isFileListUploaded);
-
+    harvestStatus("INITIALIZING_HARVEST");
     delete proxyServersJson;
 
 }
@@ -424,7 +314,9 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
     {
 
 
-        QFile keywordFile1("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi1KeywordList.txt");
+        QString multi1KeywordFileName = getRelativePath("multi1KeywordList.txt");
+
+        QFile keywordFile1(multi1KeywordFileName);
         if(!keywordFile1.open(QIODevice::ReadOnly | QIODevice::Text)){
             qDebug() << "Error opening keywordlist file 1 in worker, 1_URL_SELECTED";
             return;
@@ -456,26 +348,35 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
     if(*multiURLOption== "MULTI_URL_SELECTED")
     {
 
+        QString multi1KeywordFileName = getRelativePath("multi1KeywordList.txt");
 
-        QFile keywordFile1("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi1KeywordList.txt");
+
+        QFile keywordFile1(multi1KeywordFileName);
         if(!keywordFile1.open(QIODevice::ReadOnly | QIODevice::Text)){
             qDebug() << "Error opening keywordlist file 1 in worker";
             return;
         }
 
-        QFile keywordFile2("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi2KeywordList.txt");
+
+        QString multi2KeywordFileName = getRelativePath("multi2KeywordList.txt");
+
+        QFile keywordFile2(multi2KeywordFileName);
         if(!keywordFile2.open(QIODevice::ReadOnly | QIODevice::Text)){
             qDebug() << "Error opening keywordlist file 2 in worker";
             return;
         }
 
-        QFile keywordFile3("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi3KeywordList.txt");
+        QString multi3KeywordFileName = getRelativePath("multi3KeywordList.txt");
+
+        QFile keywordFile3(multi3KeywordFileName);
         if(!keywordFile3.open(QIODevice::ReadOnly | QIODevice::Text)){
             qDebug() << "Error opening keywordlist file 3 in worker";
             return;
         }
 
-        QFile keywordFile4("C:/Users/ace/Documents/QT_Projects/WebView/WebView/multi4KeywordList.txt");
+        QString multi4KeywordFileName = getRelativePath("multi4KeywordList.txt");
+
+        QFile keywordFile4(multi4KeywordFileName);
         if(!keywordFile4.open(QIODevice::ReadOnly | QIODevice::Text)){
             qDebug() << "Error opening keywordlist file 4 in worker";
             return;
@@ -605,6 +506,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
        for (int i = 0; i < 999999; i++)
           {
 
+           harvestStatus("HARVEST_BUSY");
 
 
               //parsedEmails();
@@ -630,80 +532,6 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   //fileList->clear();
                   break;
               }
-
-
-
-              //PROXY CONFIGURATION
-
-              if (proxyServers->isEmpty())
-              {
-
-                  isProxyEmpty = true;
-              }
-
-              if (!proxyServers->isEmpty())
-              {
-                  isProxyEmpty = false;
-
-              }
-
-              // if workerCounter == *proxyRotateIntervalPtr, reset workerCounter ; if certain number of
-              // http request have been made rotate proxy
-              if (*workerCounterPtr <= proxyRotateInterval)
-              {
-                  // only rotate each proxy if proxyCounterPtr is not greater than our proxyServer qlist
-                  if ((*proxyServerCounterPtr) <= proxyServers->size())
-                  {
-                      // if proxy counter is not greater than proxyServer qlist, proxyCounter can increment
-                      canProxyCounterIncrement = true;
-                  }
-
-                  // if proxy counter is equal to the size of proxyServer qlist, we cant increment
-                  if ((*proxyServerCounterPtr) == proxyServers->size())
-                  {
-                      canProxyCounterIncrement = false;
-                      // if proxyServerCounter is equal to the size of the proxyServer qlist, reset it to 0
-                      *proxyServerCounterPtr = 0;
-                  }
-
-
-                  // if proxies contained in qlist empty in main thread, if so clear the proxylist in this thread also
-                  if (isProxyEmpty == true && proxyServers->size() == 0)
-                  {
-                      //qDebug() << "Proxy Empty";
-                      //qDebug() << *proxyServers;
-                      //qDebug() <<proxyServers->size();
-                      proxyServers->clear();
-                      *proxies = "";
-                  }
-
-                  // if proxies contained in qlist are not empty, and we can keep incrementing,
-                  // our proxies are good to use/rotate
-                  if (isProxyEmpty == false && canProxyCounterIncrement == true)
-                  {
-                      *proxies = proxyServers->value(*proxyServerCounterPtr);
-                      //qDebug() << "Counter-->" << *proxies;
-
-                  }
-                  //qDebug() << "Counter-->" << *proxyServerCounterPtr;
-                  //qDebug() << "Proxies-->" << *proxies;
-
-              }
-
-
-              // if workerCounter is greater than *proxyRotateIntervalPtr/ amount of http request before proxy rotates
-              if (*workerCounterPtr >= proxyRotateInterval)
-              {
-                  // restart workerCounter
-                  *workerCounterPtr = 0;
-                  // increment proxyServerPtr to go through each proxyServer index every interval
-                  (*proxyServerCounterPtr) += 1;
-
-              }
-
-              // increment workerCounter if we have not hit our http request limit to rotate each proxy
-              (*workerCounterPtr) += 1;
-
 
 
 
@@ -749,7 +577,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
         /*********Increments, and loops through each keyword during each timer interval********/
               (*curlSingleProcessPtrCounter) += 1;
               (*curlMultiProcessPtrCounter) += 1;
-
+               logMessage->prepend(QString::number(*curlMultiProcessPtrCounter));
 
 
 
@@ -1148,187 +976,10 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
 
 
-               /***************Aol***************/
+               /***************Yahoo***************/
 
 
-              if (searchEngine == "http://aol.com")
-              {
-
-                  /*****Email Options******/
-
-                  /******Social NetWork Options******/
-                  if (*emailOptionsNumPtr == vectorEmailOptions.size()) {
-
-                      *emailOptionsNumPtr = 0; // done
-                  }
-
-
-
-                  if (vectorEmailOptions.contains(vectorEmailOptions.value(*emailOptionsNumPtr)))
-                  {
-                      email = vectorEmailOptions.value(*emailOptionsNumPtr);
-                  }
-
-
-
-                  /******Social NetWork Options******/
-                  if (*socialNetWorkNumPtr == vectorSocialNetworks2.size()) {
-
-                      *socialNetWorkNumPtr = 0; // done
-                  }
-
-
-                  if (vectorSocialNetworks2.contains(vectorSocialNetworks2.value(*socialNetWorkNumPtr))) {
-                      socialNetWork = vectorSocialNetworks2.value(*socialNetWorkNumPtr);
-                  }
-
-                  // search engines pagination number
-                  (*searchEnginePaginationCounterPtr) += 10;
-
-                  /*****Cast num to string to put inside query string******/
-                  castSearchQueryNumPtr = QString::number(*searchEnginePaginationCounterPtr);
-
-
-      //https://search.aol.com/aol/search;_ylt=AwrE1xRyCF5bUC8ATFFpCWVH;_ylu=X3oDMTEzajVvczlrBGNvbG8DYmYxBHBvcwMxBHZ0aWQDBHNlYwNwYWdpbmF0aW9u?q=site:instagram.com%40music%40@gmail.com&b=11&pz=20&bct=0&xargs=0&v_t=comsearch
-      //https://search.aol.com/aol/search;_ylt=A0PDsBs7Il5b6O8A0HdpCWVH;_ylu=X3oDMTEzajVvczlrBGNvbG8DYmYxBHBvcwMxBHZ0aWQDBHNlYwNwYWdpbmF0aW9u?q=site%3Ainstagram.com+my+music+%40yahoo.com&b=11&pz=10&bct=0&xargs=0&v_t=comsearch
-                  // if keyword list uploaded, and 1_URL_SELECTED is selected
-                  if(lineEdit_keywords_search_box.isEmpty() && *multiURLOption == "1_URL_SELECTED"
-                          && !multi1KeywordList.isEmpty()){
-                      searchEngineParam = "https://search.aol.com/aol/search?q=" +socialNetWork + "%20"
-                      + email + "%20" + currentKeywordSearchBoxKeyword.replace(" ", "+") +
-                      "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-                  }
-
-
-                  // if keyword box is not empty, and 1_URL_SELECTED has been selected
-                  if ((!lineEdit_keywords_search_box.isEmpty() && *multiURLOption == "1_URL_SELECTED")
-                         // || multi1KeywordList.isEmpty()
-                     )
-                  {
-
-                      currentKeywordSearchBoxKeyword = lineEdit_keywords_search_box;
-                      searchEngineParam = "https://search.aol.com/aol/search?q=" +socialNetWork + "%20"
-                      + email + "%20" + currentKeywordSearchBoxKeyword.replace(" ", "+") +
-                      "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-                  }
-
-                  // if list is uploaded, and MULTI_URL_SELECTED has been selected
-                  if (!multi1KeywordList.isEmpty() && !multi2KeywordList.isEmpty() &&  *multiURLOption == "MULTI_URL_SELECTED")
-                  {
-
-                          // if keyword list is uploaded but user has selected multi  option
-                          // if multi option is selected, assign url to multiparam1 and multiparam2
-                      searchEngineParamMulti1 = "https://search.aol.com/aol/search?q="+ socialNetWork + "%20"
-                            + email +  multi1CurrentKeyword.replace(" ", "+") +
-                             "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-
-
-                        searchEngineParamMulti2 = "https://search.aol.com/aol/search?q=" + socialNetWork + "%20"
-                            +  email + multi2CurrentKeyword.replace(" ", "+") +
-                            "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-
-                        searchEngineParamMulti3 = "https://search.aol.com/aol/search?q=" + socialNetWork + "%20"
-                            +  email + multi3CurrentKeyword.replace(" ", "+") +
-                            "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-
-                        searchEngineParamMulti4 = "https://search.aol.com/aol/search?q=" + socialNetWork + "%20"
-                            +  email + multi4CurrentKeyword.replace(" ", "+") +
-                            "&b=11&pz=" + castSearchQueryNumPtr + "&bct=0&xargs=0&v_t=comsearch";
-                  }
-
-
-                  /****Continues email quene until its the last item in array***/
-
-                  if (*searchEnginePaginationCounterPtr == 100) {
-                      if (*emailOptionsNumPtr == vectorEmailOptions.size() - 1) {
-
-                          *emailOptionsNumPtr = 0;
-
-                      }
-                      else {
-                          (*emailOptionsNumPtr) += 1;
-                      }
-                  }
-
-                  /****Continues social network quene until its the last item in array***/
-
-                  if (*searchEnginePaginationCounterPtr == 100) {
-                      if (*socialNetWorkNumPtr == vectorSocialNetworks2.size() - 1) {
-
-                          *socialNetWorkNumPtr = 0;
-
-                      }
-                      else {
-                          (*socialNetWorkNumPtr) += 1;
-                      }
-                  }
-
-
-
-
-
-                  /*******
-                  * If search engine pagination reaches 100
-                  * Stops social network, email, ans search engine quene, and moves on to next search engine
-                  ******/
-
-                  if (*searchEnginePaginationCounterPtr == 100) {
-                      *searchEnginePaginationCounterPtr = 0;
-
-                      // if social network pointer, and email options pointer is equal
-                      //than the size of  socialNetworkOptions arrary,
-                      //then were done, and move on
-                      if (*socialNetWorkNumPtr == vectorSocialNetworks2.size() - 1)
-                      {
-
-                          /*******
-                          if the last item in vector is true, and dosent match our current value
-                          theres more elements after our current element, we need
-                          this to make sure out pointer dosent get out of a range/QVector out of range.
-                          *****/
-
-                          if (!vectorSearchEngineOptions.last().isEmpty())
-                          {
-                              vectorSearchEngineOptionsLastItem = vectorSearchEngineOptions.last();
-                              if (vectorSearchEngineOptionsLastItem != vectorSearchEngineOptions.value(*searchEngineNumPtr)) {
-                                  (*searchEngineNumPtr) += 1;
-                              }
-                          }
-                      }// end of checking if search eng pagination has reached 100
-
-                      if (*emailOptionsNumPtr == vectorEmailOptions.size())
-                      {
-                          *emailOptionsNumPtr = 0;
-                      }
-                  }
-
-
-                  //            qDebug() << "Search Engine Vector -->" <<vectorSearchEngineOptions;
-                  //            qDebug() << "Search Engine Vector Size -->" <<vectorSearchEngineOptions.size();
-                  //            qDebug() << "Search Engine Vector Pointer -->" << *searchEngineNumPtr;
-
-
-                  //            qDebug() << "Email Vector  -->" <<vectorEmailOptions;
-                  //            qDebug() << "Email Vector Size -->" <<vectorEmailOptions.size();
-                  //            qDebug() << "Email Vector Pointer -->" << *emailOptionsNumPtr;
-
-
-                  //            qDebug() << "Social Vector -->" <<vectorSocialNetworks2;
-                  //            qDebug() << "Social Vector Size -->" <<vectorSocialNetworks2.size();
-                  //            qDebug() << "Social Vector Pointer -->" << *socialNetWorkNumPtr;
-
-                  // qDebug() << searchEngineParam;
-                  // qDebug()<<  searchEngine;
-                  // qDebug()<<  vectorSearchEngineOptions;
-                  // qDebug() << *searchEnginePaginationCounterPtr;
-
-              }// end of checking if search engine is Aol
-
-
-               /***************Ask***************/
-
-
-              if (searchEngine == "http://ask.com")
+              if (searchEngine == "http://yahoo.com")
               {
 
                   /*****Email Options******/
@@ -1380,30 +1031,34 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   {
 
                       currentKeywordSearchBoxKeyword =  lineEdit_keywords_search_box;
-                      searchEngineParam = "https://www.google.com/search?q=" + socialNetWork + "%20"
+                      searchEngineParam = "https://search.yahoo.com/search;_ylt=A2KIbNDlJS1b7nIAYNNx.9w4;_ylu=X3oDMTFjN3E2bWhuBGNvbG8DYmYxBHBvcwMxBHZ0aWQDVUkyRkJUMl8xBHNlYwNwYWdpbmF0aW9u?p="
+                           + socialNetWork + "%20"
                           + email + "%20" + currentKeywordSearchBoxKeyword.replace(" ", "+") +
-                          "&ei=yv8oW8TYCOaN5wKImJ2YBQ&start=" + castSearchQueryNumPtr + "&sa=N&biw=1366&bih=613";
+                          "&ei=UTF-8&fr=yfp-hrmob&fr2=p%3Afp%2Cm%3Asb&_tsrc=yfp-hrmob&fp=1&b=11&pz=" + castSearchQueryNumPtr + "&xargs=0";
 
                   }
 
                   if (!multi1KeywordList.isEmpty() && !multi1KeywordList.isEmpty())
                   {
 
-                      searchEngineParam = "https://www.google.com/search?q=" + socialNetWork + "%20"
+                      searchEngineParam = "https://search.yahoo.com/search;_ylt=A2KIbNDlJS1b7nIAYNNx.9w4;_ylu=X3oDMTFjN3E2bWhuBGNvbG8DYmYxBHBvcwMxBHZ0aWQDVUkyRkJUMl8xBHNlYwNwYWdpbmF0aW9u?p="
+                          + socialNetWork + "%20"
                           + email + "%20" + currentKeywordPtr->replace(" ", "+") +
-                          "&ei=yv8oW8TYCOaN5wKImJ2YBQ&start=" + castSearchQueryNumPtr + "&sa=N&biw=1366&bih=613";
+                          "&ei=UTF-8&fr=yfp-hrmob&fr2=p%3Afp%2Cm%3Asb&_tsrc=yfp-hrmob&fp=1&b=11&pz=" + castSearchQueryNumPtr + "&xargs=0";
 
                       // if keyword list is uploaded but user has selected multi  option
                       if (*multiURLOption == "MULTI_URL_SELECTED")
                       {
                           // if multi option is selected, assign url to multiparam1 and multiparam2
-                          searchEngineParamMulti1 = "https://www.google.com/search?q=" + socialNetWork + "%20"
+                          searchEngineParamMulti1 = "https://search.yahoo.com/search;_ylt=A2KIbNDlJS1b7nIAYNNx.9w4;_ylu=X3oDMTFjN3E2bWhuBGNvbG8DYmYxBHBvcwMxBHZ0aWQDVUkyRkJUMl8xBHNlYwNwYWdpbmF0aW9u?p="
+                              + socialNetWork + "%20"
                               + email + "%20" + multi1CurrentKeyword.replace(" ", "+") +
-                              "&ei=yv8oW8TYCOaN5wKImJ2YBQ&start=" + castSearchQueryNumPtr + "&sa=N&biw=1366&bih=613";
+                              "&ei=UTF-8&fr=yfp-hrmob&fr2=p%3Afp%2Cm%3Asb&_tsrc=yfp-hrmob&fp=1&b=11&pz=" + castSearchQueryNumPtr + "&xargs=0";
 
-                          searchEngineParamMulti2 = "https://www.google.com/search?q=" + socialNetWork + "%20"
+                          searchEngineParamMulti2 = "https://search.yahoo.com/search;_ylt=A2KIbNDlJS1b7nIAYNNx.9w4;_ylu=X3oDMTFjN3E2bWhuBGNvbG8DYmYxBHBvcwMxBHZ0aWQDVUkyRkJUMl8xBHNlYwNwYWdpbmF0aW9u?p="
+                               + socialNetWork + "%20"
                               + email + "%20" + multi2CurrentKeyword.replace(" ", "+") +
-                              "&ei=yv8oW8TYCOaN5wKImJ2YBQ&start=" + castSearchQueryNumPtr + "&sa=N&biw=1366&bih=613";
+                              "&ei=UTF-8&fr=yfp-hrmob&fr2=p%3Afp%2Cm%3Asb&_tsrc=yfp-hrmob&fp=1&b=11&pz=" + castSearchQueryNumPtr + "&xargs=0";
                       }
 
                   }
@@ -1495,7 +1150,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   // qDebug()<<  vectorSearchEngineOptions;
                   // qDebug() << *searchEnginePaginationCounterPtr;
 
-              }// end of checking if search engine is Ask
+              }// end of checking if search engine is Yahoo
 
 
 
@@ -1576,7 +1231,9 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
               }
 
               /*******Write current keywords to json file*******/
-               currentKeywordFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/currentkeywords.json");
+              QString currentKeywordFileName = getRelativePath("currentkeywords.json");
+
+               currentKeywordFile.setFileName(currentKeywordFileName);
                if(!currentKeywordFile.open(QIODevice::WriteOnly)){
                    qDebug() << "Error opening currentkeywords json file in worker";
                    return;
@@ -1592,9 +1249,9 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
 
 
+               harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
 
-              logMessage->prepend(QString("Multi Counter--> ") + QString::number(*curlMultiProcessPtrCounter));
-
+               myLogFile();
               /**** If 1_URL_SELECTED is selected/ or if MULTI_URL_SELECTED is selected ,
                and timer is less or equal to search results combox box..
                Stop harvest if 1_URL_SELECTED is selected but no list was uploaded
@@ -1608,12 +1265,11 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   {
                       logMessage->prepend(QString("1_URL_SELECTED, FileList is Empty and Default Search Options is true"));
                       logMessage->prepend(QString("1_URL_SELECTED, using keywordbox, keyword--> " +currentKeywordSearchBoxKeyword.replace("+"," ")));
-                      *curlSingleProcessPtrCounter = 0;
-                      stopHarvestLoop = true;
-                      emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
-                      logHarvesterStatus.clear();
+                      logMessage->prepend(QString("Single Counter--> ") + QString::number(*curlSingleProcessPtrCounter));
                       completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("1_URL_SELECTED_RESULTS_COMPLETED").toString());
-                      completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
+                      QString completeFileName = getRelativePath("complete.json");
+
+                      completeResultsFile.setFileName(completeFileName );
                       if(!completeResultsFile.open(QIODevice::WriteOnly)){
                           qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
                           return;
@@ -1621,6 +1277,8 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                      completeResultsJsonDocument.setObject(completeResultsObj);
                      completeResultsFile.write(completeResultsJsonDocument.toJson());
                      completeResultsFile.close();
+                     *curlSingleProcessPtrCounter = 0;
+                     stopHarvestLoop = true;
                   }
 
 
@@ -1629,12 +1287,11 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                   {
                       logMessage->prepend(QString("1_URL_SELECTED, FileList is Not Empty and Default Search Options is true"));
                       logMessage->prepend(QString("1_URL_SELECTED, using multi1KeywordList, keyword--> " + QString(multi1KeywordList.value(*multi1CurrentKeywordPtr))));
-                      *curlSingleProcessPtrCounter = 0;
-                      stopHarvestLoop = true;
-                      emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
-                      logHarvesterStatus.clear();
+
                       completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("1_URL_SELECTED_RESULTS_COMPLETED").toString());
-                      completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
+                      QString completeFileName = getRelativePath("complete.json");
+
+                      completeResultsFile.setFileName(completeFileName);
                       if(!completeResultsFile.open(QIODevice::WriteOnly)){
                           qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
                           return;
@@ -1642,6 +1299,8 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                      completeResultsJsonDocument.setObject(completeResultsObj);
                      completeResultsFile.write(completeResultsJsonDocument.toJson());
                      completeResultsFile.close();
+                     *curlSingleProcessPtrCounter = 0;
+                     stopHarvestLoop = true;
                   }
 
                   /*************
@@ -1687,16 +1346,14 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                           if (*multi1CurrentKeywordPtr > multi1KeywordList.size()) {
                               *multi1CurrentKeywordPtr = 0;  // just in case the pointer goes beyond fileList size()
                           }
-                          *curlSingleProcessPtrCounter = 0;
                           multi1KeywordList.clear();
                           *multi1CurrentKeywordPtr= 0;
-                          stopHarvestLoop = true;
-                          emitFinishSenderHarvestResults("MULTI_SINGLE COMPLETED");
-                          logHarvesterStatus.clear();
                           logMessage->prepend("1_URL_SELECTED, ALL_LIST_COMPLETED");
                           completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("MULTI_URL_SELECTED_RESULTS_COMPLETED").toString());
 
-                          completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
+                          QString completeFileName = getRelativePath("complete.json");
+
+                          completeResultsFile.setFileName(completeFileName);
                           if(!completeResultsFile.open(QIODevice::WriteOnly)){
                               qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
                               return;
@@ -1704,23 +1361,18 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                          completeResultsJsonDocument.setObject(completeResultsObj);
                          completeResultsFile.write(completeResultsJsonDocument.toJson());
                          completeResultsFile.close();
+                         stopHarvestLoop = true;
+                         *curlSingleProcessPtrCounter = 0;
+
                       }
 
                   }// end of checking if fileList is empty
 
+                  myLogFile();
 
               }else
               {
 
-                  completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("").toString());
-                  completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
-                  if(!completeResultsFile.open(QIODevice::WriteOnly)){
-                      qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
-                      return;
-                  }
-                 completeResultsJsonDocument.setObject(completeResultsObj);
-                 completeResultsFile.write(completeResultsJsonDocument.toJson());
-                 completeResultsFile.close();
 
               } // end of checking searchResultsPagesNumber
 
@@ -1736,6 +1388,7 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
               if (QString::number(*curlMultiProcessPtrCounter) == QString(searchResultsPagesNumber) && *multiURLOption == "MULTI_URL_SELECTED")
 
               {
+
 
                   /*********Get current keyword within json file*******/
 //                  QString currentKeywordJsonVal;
@@ -1767,12 +1420,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                       if(searchResultsOptions == QString::number(DEFAULT_SEARCH_RESULT))
                       {
                          logMessage->prepend("Multi  is True");
-                         *curlMultiProcessPtrCounter = 0;
-                          stopHarvestLoop = true;
 
                           completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("MULTI_URL_SELECTED_COMPLETED_USING_DEFAULT_SEARCH_OPTION").toString());
 
-                          completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
+                          QString completeFileName = getRelativePath("complete.json");
+
+                          completeResultsFile.setFileName(completeFileName);
                           if(!completeResultsFile.open(QIODevice::WriteOnly)){
                               qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
                               return;
@@ -1780,6 +1433,9 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                          completeResultsJsonDocument.setObject(completeResultsObj);
                          completeResultsFile.write(completeResultsJsonDocument.toJson());
                          completeResultsFile.close();
+                         *curlMultiProcessPtrCounter = 0;
+                         stopHarvestLoop = true;
+
                       }
 
 
@@ -1806,12 +1462,11 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                             // If Current value does not match last item, theres more items
                             if(!multi1KeywordList.isEmpty())
                             {
-                                if (multi1KeywordList.value(*multi1CurrentKeywordPtr) != multi1KeywordList.last() &&
-                                    multi1KeywordList.value(*multi1CurrentKeywordPtr) != multi1KeywordList.last().isEmpty())
+                                if (multi1KeywordList.value(*multi1CurrentKeywordPtr) != multi1KeywordList.last())
                                 {
                                     (*multi1CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage->prepend(QString("More items, next multi1KeywordList keyword --> " + QString(multi1CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi1KeywordList keyword --> " + QString(multi1KeywordList.value(*multi1CurrentKeywordPtr).replace("+"," "))));
                                 }
                                 // Current value matches the last keyword, no more items
                                 if (multi1KeywordList.value(*multi1CurrentKeywordPtr) == multi1KeywordList.last())
@@ -1822,8 +1477,6 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     }
                                     multi1KeywordList.clear();
                                     *multi1CurrentKeywordPtr = 0;
-                                    emit emitFinishSenderHarvestResults("MULTI COMPLETED");
-                                    logHarvesterStatus.clear();
                                     logMessage->prepend(QString("multi1keywordList harvest complete" ));
                                     isMulti1KeywordListComplete =true;
                                 }
@@ -1833,12 +1486,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                             // If Current value does not matches last item, theres more items
                             if(!multi2KeywordList.isEmpty())
                             {
-                                if (multi2KeywordList.value(*multi2CurrentKeywordPtr) != multi2KeywordList.last() &&
-                                    multi2KeywordList.value(*multi2CurrentKeywordPtr) != multi2KeywordList.last().isEmpty())
+                                if (multi2KeywordList.value(*multi2CurrentKeywordPtr) != multi2KeywordList.last())
                                 {
                                     (*multi2CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage->prepend(QString("More items, next multi2KeywordList keyword -->" + QString(multi2CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi2KeywordList keyword -->"
+                                    + QString(multi2KeywordList.value(*multi2CurrentKeywordPtr).replace("+"," "))));
 
                                 }
 
@@ -1851,8 +1504,6 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     }
                                     multi2KeywordList.clear();
                                     *multi2CurrentKeywordPtr = 0;
-                                    emit emitFinishSenderHarvestResults("MULTI COMPLETED");
-                                    logHarvesterStatus.clear();
                                     logMessage->prepend(QString("multi2keywordList harvest complete" ));
                                     isMulti2KeywordListComplete =true;
 
@@ -1865,12 +1516,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                             // If Current value does not matches last item, theres more items
                             if(!multi3KeywordList.isEmpty())
                             {
-                                if (multi3KeywordList.value(*multi3CurrentKeywordPtr) != multi3KeywordList.last() &&
-                                    multi3KeywordList.value(*multi3CurrentKeywordPtr) != multi3KeywordList.last().isEmpty())
+                                if (multi3KeywordList.value(*multi3CurrentKeywordPtr) != multi3KeywordList.last())
                                 {
                                     (*multi3CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage->prepend(QString("More items, next multi3KeywordList keyword --> " + QString(multi3CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi3KeywordList keyword --> " +
+                                                    QString(multi3KeywordList.value(*multi3CurrentKeywordPtr).replace("+"," "))));
 
 
                                 }
@@ -1884,8 +1535,6 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     multi3KeywordList.clear();
                                     *multi3CurrentKeywordPtr = 0;
                                      stopHarvestLoop = true;
-                                    emit emitFinishSenderHarvestResults("MULTI COMPLETED");
-                                    logHarvesterStatus.clear();
                                     logMessage->prepend(QString("multi3keywordList harvest complete" ));
                                     isMulti3KeywordListComplete =true;
 
@@ -1897,12 +1546,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                             if(!multi4KeywordList.isEmpty())
                             {
                                 // If Current value does not matches last item, theres more items
-                                if (multi4KeywordList.value(*multi4CurrentKeywordPtr) != multi4KeywordList.last() &&
-                                    multi4KeywordList.value(*multi4CurrentKeywordPtr) != multi4KeywordList.last().isEmpty())
+                                if (multi4KeywordList.value(*multi4CurrentKeywordPtr) != multi4KeywordList.last() )
                                 {
                                     (*multi4CurrentKeywordPtr) += 1;
                                     *curlMultiProcessPtrCounter = 0;
-                                    logMessage->prepend(QString("More items, next multi4KeywordList keyword --> " + QString(multi4CurrentKeyword.replace("+"," "))));
+                                    logMessage->prepend(QString("More items, next multi4KeywordList keyword --> " +
+                                                                QString(multi2KeywordList.value(*multi2CurrentKeywordPtr).replace("+"," "))));
 
 
                                 }
@@ -1915,8 +1564,6 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                     }
                                     multi4KeywordList.clear();
                                     *multi4CurrentKeywordPtr = 0;
-                                    emit emitFinishSenderHarvestResults("MULTI COMPLETED");
-                                    logHarvesterStatus.clear();
                                     logMessage->prepend(QString("multi4keywordList harvest complete" ));
                                     isMulti4KeywordListComplete =true;
 
@@ -1934,7 +1581,9 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
                                 stopHarvestLoop = true;
                                 completeResultsObj.insert("COMPLETED_RESULTS",QJsonValue("MULTI_URL_SELECTED_ALL_LIST_COMPLETED_USING_BYPASS_OPTION").toString());
 
-                                completeResultsFile.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/complete.json");
+                                QString completeFileName = getRelativePath("complete.json");
+
+                                completeResultsFile.setFileName(completeFileName);
                                 if(!completeResultsFile.open(QIODevice::WriteOnly)){
                                     qDebug() << "Error opening complete.json in webview worker" << completeResultsFile.errorString();
                                     return;
@@ -1946,13 +1595,12 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
 
                             }
 
+                            myLogFile();
                         }// end if bypass option is true
 
 
+
               }// end if multi counter matches search result number
-
-
-
 
 
               QEventLoop loop;
@@ -1960,17 +1608,39 @@ void Worker::startHarvest(QVector<QString>vectorSearchEngineOptions,
               loop.exec();
 
 
-              QTextStream outStream(logFile);
-              for(int i=0; i < logMessage->size(); i++)
-              {
-                  outStream << logMessage->value(i) << "\n";
-              }
 
           }// end of for loop
 
    }
 
      //emit finished();
+}
+
+void Worker::harvestStatus(QString status)
+{
+    QFile harvestStatusFile;
+    QJsonDocument harvestStatusDocument;
+    QJsonObject  harvestStatusObject;
+    harvestStatusObject.insert("HarvestStatus",QJsonValue(status).toString());
+    QString completeFileName = getRelativePath("complete.json");
+
+    harvestStatusFile.setFileName(completeFileName);
+    if(!harvestStatusFile.open(QIODevice::WriteOnly | QIODevice::Text)){
+        qDebug() << "Error opening json file in webview " << harvestStatusFile.errorString();
+    }
+    harvestStatusDocument.setObject(harvestStatusObject);
+    harvestStatusFile.write(harvestStatusDocument.toJson());
+    harvestStatusFile.close();
+
+}
+
+void Worker::myLogFile()
+{
+    QTextStream outStream(logFile);
+    for(int i=0; i < logMessage->size(); i++)
+    {
+        outStream << logMessage->value(i) << "\n";
+    }
 }
 
 void Worker::receiverWebViewLog(QString webViewLogMessage)
@@ -1987,7 +1657,7 @@ void Worker::receiverWebViewLog(QString webViewLogMessage)
 
 }
 
-void Worker::myLogFile(QString logMessage,int logInt)
+void Worker::myLogFile_(QString logMessage,int logInt)
 {
 //    logFile = new QFile();
 //    logFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/log.txt");
@@ -2002,7 +1672,9 @@ void Worker::myLogFile(QString logMessage,int logInt)
 //    logFile->close();
 
     QFile file;
-    file.setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/log.txt");
+    QString httpStatusFileName = getRelativePath("log.txt");
+
+    file.setFileName(httpStatusFileName);
     if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         qDebug() << "Error opening logfile in webview worker";
@@ -2013,3 +1685,29 @@ void Worker::myLogFile(QString logMessage,int logInt)
   //  file.close();
 }
 
+QString Worker::getRelativePath(QString fileName)
+{
+    /*********
+    RECAP OF RECONFIGURING WBVIEW BUILD LOCATION
+    Webview build is now in
+    C:\Users\ace\Documents\QT_Projects\WebView Controller\build-BeatCrawler-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug\debug\resources\webview\debug
+    - this is so when we eventually build and deploy the web view controller we can easily access the web crawler like /resources/Webview.exe etc..
+
+    all json,.log, and .txt files are read using getRelativePath() function
+    this function either moves up a dir, or is the root dir of the .exe,
+    depending on whether its being used in webcrawler controller, or webview
+
+    For some strange reason, when debugging, several .log, .json, and .txt files
+    are being copied outside of the application folder, in webview controller.
+    Once we fix this, we are good to deploy program.
+
+
+    **********/
+//    QDir tempCurrDir  = QDir::current();
+//    tempCurrDir.cdUp();
+//    QString root = tempCurrDir.path();
+//    return root + "/" +fileName;
+
+    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
+}

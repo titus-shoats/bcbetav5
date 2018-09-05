@@ -10,8 +10,8 @@
 class Options {
 
 public:
-        // valid options "google","bing","yahoo"
-        QString searchEngineOptions[4];
+        // valid options "google","bing", "yahoo"
+        QString searchEngineOptions[3];
         //{"gmail","hotmail","yahoo","outlook"};
         QString emailOptions[4];
         //valid options {"instagram","facebook","soundcloud",etc};

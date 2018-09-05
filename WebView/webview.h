@@ -25,7 +25,6 @@ class WebView : public QWebView
 public:
    WebView(QWidget *parent = 0);
    ~WebView();
-   //void setViewProxy(QString proxyHost,quint16 proxyPort);
    void setViewProxy(QNetworkProxy proxy);
    void setParams();
    void openEmailListFile(QFile * emailListFile);
@@ -38,6 +37,8 @@ public:
    void connClose();
    void proxyListRotater(QStringList proxyServersList,QWebPage *page);
    void initProxyListSettings();
+   void harvestStatus(QString status);
+   QString getRelativePath(QString fileName);
 
 
 protected:
