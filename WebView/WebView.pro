@@ -4,10 +4,15 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets webkitwidgets webkit sql network
+QT       += core gui widgets webkitwidgets webkit sql network concurrent
 
 TARGET = WebView
 TEMPLATE = app
+
+INCLUDEPATH += C:\curl-7.34.0-devel-mingw32\include
+LIBS += C:\curl-7.34.0-devel-mingw32\lib\libcurldll.a
+LIBS += C:\curl-7.34.0-devel-mingw32\lib\libcurl.a
+
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -26,12 +31,17 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     webview.cpp \
-    worker.cpp
+    worker.cpp \
+    curleasy.cpp \
+    curlmulti.cpp
 
 HEADERS += \
         mainwindow.h \
     worker.h \
-    webview.h
+    webview.h \
+    config.h \
+    curleasy.h \
+    curlmulti.h
 
 FORMS += \
         mainwindow.ui

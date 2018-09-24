@@ -21,7 +21,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow),qry(nullptr)
 {
     ui->setupUi(this);
-    setWindowTitle("Beat Crawler V0.1.9 (C) Beatcrawler.com");
+    setWindowTitle("Demo Beat Crawler V1.0.9 (C) Beatcrawler.com");
+    demoVersion = true;
+    onInitEnableFullFeatures();
     ui->lineEdit_keywords_search_box->setPlaceholderText("my mixtape");
 
     QSize size = this->size();
@@ -64,6 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
     emailTableTimer = new QTimer();
     completeHarvestTimer = new QTimer();
     emailCountTimer = new QTimer();
+
     connect(ui->tableWidget_Proxy->selectionModel(),
             SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this,
             SLOT(recieverProxyTableSelection(const QItemSelection &, const QItemSelection &)));
@@ -96,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
 
+
    //ui->pushButton_Next_Email_Pagination->setEnabled(false);
   // ui->pushButton_Previous_Email_Pagination->setEnabled(false);
 
@@ -112,6 +116,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     //ui->radioButton_Parse_Multi_URL->hide();
+
+    ui->label_Items_Found->hide();
 
     ui->pushButton_Start->setCheckable(true);
     ui->checkBox_Email_Gmail->setChecked(true);
@@ -131,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->checkBox_Social_Reverbnation->setChecked(true);
 
 
+    ui->label_Status_Software_Version->setText(" <b ><font color='green'>License Version: 1.0.9 </font> </b>");
 
     ui->radioButton_Android_Webkit->setChecked(true);
 
@@ -173,7 +180,7 @@ MainWindow::~MainWindow()
    delete options;
    delete proxyServers;
    delete fileList;
-   webViewProcess->close();
+   killWebViewProcess();
    delete webViewProcess;
 
    delete worker;
@@ -191,109 +198,109 @@ void MainWindow::completeHarvesterTimer()
 {
 
     /*******Checks harvest status******/
-//    QString harvestVal;
-//    QFile harvestFile;
-//    QString filename = getRelativePath("harvesterstatus.json");
+    QString harvestVal;
+    QFile harvestFile;
+    QString filename = getRelativePath("harvesterstatus.json");
 
-//    harvestFile.setFileName(filename);
-//    if(!harvestFile.open(QIODevice::ReadOnly | QIODevice::Text)){
-//        qDebug() << "Error opening json file in webview" << harvestFile.errorString();
-//    }
-//    harvestVal = harvestFile.readAll();
-//    harvestFile.close();
-
-
-//    QJsonDocument harvestDocument = QJsonDocument::fromJson(harvestVal.toUtf8());
-//    QJsonObject harvestjsonObject = harvestDocument.object();
-//    QString harvestResults = harvestjsonObject.value(QString("HarvestStatus")).toString();
-
-//    if(!harvestResults.isEmpty())
-//    {
-//        ui->label_Curl_Status->setText("Status: " + harvestResults );
-//    }else
-//    {
-//        ui->label_Curl_Status->setText("Status: BUSY...");
-
-//    }
+    harvestFile.setFileName(filename);
+    if(!harvestFile.open(QIODevice::ReadOnly | QIODevice::Text)){
+        qDebug() << "Error opening json file in webview" << harvestFile.errorString();
+    }
+    harvestVal = harvestFile.readAll();
+    harvestFile.close();
 
 
+    QJsonDocument harvestDocument = QJsonDocument::fromJson(harvestVal.toUtf8());
+    QJsonObject harvestjsonObject = harvestDocument.object();
+    QString harvestResults = harvestjsonObject.value(QString("HarvestStatus")).toString();
 
-//    /*******Checks if harvester is complete******/
-//    QString val;
-//    QFile file;
+    if(!harvestResults.isEmpty())
+    {
+        ui->label_Curl_Status->setText("Status: " + harvestResults );
+    }else
+    {
+        ui->label_Curl_Status->setText("Status: BUSY...");
 
-//    QString completeFileName = getRelativePath("complete.json");
-
-//    file.setFileName(completeFileName);
-//    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-//        qDebug() << "Error opening json file in webview" << file.errorString();
-//    }
-//    val = file.readAll();
-//    file.close();
-
-//    QJsonDocument document = QJsonDocument::fromJson(val.toUtf8());
-//    QJsonDocument jsonDocument;
-//    QJsonObject jsonObject = document.object();
-//    QString completeResults = jsonObject.value(QString("COMPLETED_RESULTS")).toString();
-
-//    if(!completeResults.isEmpty())
-//    {
-//        qDebug() << "NOT EMPTY";
-//        if(completeResults == "1_URL_SELECTED_RESULTS_COMPLETED"
-//           || completeResults == "MULTI_URL_SELECTED_RESULTS_COMPLETED"
-//           || completeResults == "MULTI_URL_SELECTED_COMPLETED_USING_DEFAULT_SEARCH_OPTION"
-//           ||  completeResults == "MULTI_URL_SELECTED_ALL_LIST_COMPLETED_USING_BYPASS_OPTION")
-//        {
-//            (*emailRowStartPtr) =0;
-//            (*emailRowEndPtr) =0;
-//             webViewProcess->close();
-//             emailTableTimer->stop();
-//             completeHarvestTimer->stop();
-//             emit emitStopQueueKeywords();
-//             emit emitStopWorker();
-//             ui->label_Curl_Status->setText("Status: ");
-//             clickedStartStopButton = false;
-//             ui->pushButton_Start->setText("Start");
-//             ui->tabWidget_Harvester_Options->setTabEnabled(0, true);
-//             ui->tabWidget_Harvester_Options->setTabEnabled(1, true);
-//             ui->tabWidget_Harvester_Options->setTabEnabled(2, true);
-//             ui->tabWidget_Harvester_Options->setTabEnabled(3, true);
-//             ui->tableWidget_Proxy->setEnabled(true);
-//             ui->lineEdit_Proxy_Host->setEnabled(true);
-//             ui->lineEdit_Proxy_Port->setEnabled(true);
-//             ui->pushButton_Add_Proxy->setEnabled(true);
-//             ui->checkBox_Delete_Emails->setEnabled(true);
-//             ui->checkBox_Delete_Keywords->setEnabled(true);
-//             ui->lineEdit_keywords_search_box->setEnabled(true);
-//             ui->pushButton_Save_Emails->setEnabled(true);
-//             ui->pushButton_Load_Keyword_List->setEnabled(true);
-
-//             connOpen();
-//             QSqlQuery *qry = new QSqlQuery(mydb);
-//             if(!qry->exec("select * from crawleremails"))
-//             {
-//                 qDebug() << "Error selecting rows from crawleremails in mainwinow " << qry->lastError().text();
-//                 return;
-//             }
-//             queryModel->setQuery(*qry);
-//             QMessageBox::information(this, "Harvest Complete.", "Harvest Completed: Items Found " +QString::number(queryModel->rowCount()));
-//             delete qry;
-//             connClose();
-
-//             ui->pushButton_Start->setChecked(false);
-//             // stops user from pressing start to many times in a row, which will lead to problems
-//             ui->pushButton_Start->setEnabled(false);
-//             QTimer::singleShot(4000, this, SLOT(reEnableStartButton()));
-//             clearFiles();
-//             ui->listWidget_Log_Harvester_Status->clear();
+    }
 
 
-//        }
-//    }else
-//    {
-//        qDebug() << "EMPTY";
 
-//    }
+    /*******Checks if harvester is complete******/
+    QString val;
+    QFile file;
+
+    QString completeFileName = getRelativePath("complete.json");
+
+    file.setFileName(completeFileName);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
+        qDebug() << "Error opening json file in webview" << file.errorString();
+    }
+    val = file.readAll();
+    file.close();
+
+    QJsonDocument document = QJsonDocument::fromJson(val.toUtf8());
+    QJsonDocument jsonDocument;
+    QJsonObject jsonObject = document.object();
+    QString completeResults = jsonObject.value(QString("COMPLETED_RESULTS")).toString();
+
+    if(!completeResults.isEmpty())
+    {
+       // qDebug() << "NOT EMPTY";
+        if(completeResults == "1_URL_SELECTED_RESULTS_COMPLETED"
+           || completeResults == "MULTI_URL_SELECTED_RESULTS_COMPLETED"
+           || completeResults == "MULTI_URL_SELECTED_COMPLETED_USING_DEFAULT_SEARCH_OPTION"
+           ||  completeResults == "MULTI_URL_SELECTED_ALL_LIST_COMPLETED_USING_BYPASS_OPTION")
+        {
+            (*emailRowStartPtr) =0;
+            (*emailRowEndPtr) =0;
+             killWebViewProcess();
+             emailTableTimer->stop();
+             completeHarvestTimer->stop();
+             emit emitStopQueueKeywords();
+             emit emitStopWorker();
+             ui->label_Curl_Status->setText("Status: ");
+             clickedStartStopButton = false;
+             ui->pushButton_Start->setText("Start");
+             ui->tabWidget_Harvester_Options->setTabEnabled(0, true);
+             ui->tabWidget_Harvester_Options->setTabEnabled(1, true);
+             ui->tabWidget_Harvester_Options->setTabEnabled(2, true);
+             ui->tabWidget_Harvester_Options->setTabEnabled(3, true);
+             ui->tableWidget_Proxy->setEnabled(true);
+             ui->lineEdit_Proxy_Host->setEnabled(true);
+             ui->lineEdit_Proxy_Port->setEnabled(true);
+             ui->pushButton_Add_Proxy->setEnabled(true);
+             ui->checkBox_Delete_Emails->setEnabled(true);
+             ui->checkBox_Delete_Keywords->setEnabled(true);
+             ui->lineEdit_keywords_search_box->setEnabled(true);
+             ui->pushButton_Save_Emails->setEnabled(true);
+             ui->pushButton_Load_Keyword_List->setEnabled(true);
+
+             connOpen();
+             QSqlQuery *qry = new QSqlQuery(mydb);
+             if(!qry->exec("select * from crawleremails"))
+             {
+                 qDebug() << "Error selecting rows from crawleremails in mainwinow " << qry->lastError().text();
+                 return;
+             }
+             queryModel->setQuery(*qry);
+             QMessageBox::information(this, "Harvest Complete.", "Harvest Completed: Items Found " +QString::number(queryModel->rowCount()));
+             delete qry;
+             connClose();
+
+             ui->pushButton_Start->setChecked(false);
+             // stops user from pressing start to many times in a row, which will lead to problems
+             ui->pushButton_Start->setEnabled(false);
+             QTimer::singleShot(4000, this, SLOT(reEnableStartButton()));
+             clearFiles();
+             ui->listWidget_Log_Harvester_Status->clear();
+
+
+        }
+    }else
+    {
+       // qDebug() << "EMPTY";
+
+    }
 
 
 }
@@ -306,7 +313,9 @@ void MainWindow::emailCount()
             emailListCount.prepend(emailTableModel->item(i)->text());
         }
     }
-   ui->label_Items_Found->setText("Items Found: " + QString::number(emailListCount.toSet().toList().size()));
+  // ui->label_Items_Found->setText("Items Found: " + QString::number(emailListCount.toSet().toList().size()));
+  // ui->label_Items_Found->setText("Items Found: " + QString::number(emailListCount.size()));
+
    if(!clickedStartStopButton)
    {
       // emailListCount.clear();
@@ -646,6 +655,7 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
             }
 
 
+
             //create a object of value start_harvest when we press stop
            obj.insert("StartHarvest",QJsonValue("START_HARVEST").toString());
            QString stopHarvest = getRelativePath("stopharvest.json");
@@ -659,9 +669,27 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
            file.write(jsonDocument.toJson());
            file.close();
 
-            QStringList args;
+           QString userName =  qgetenv("USERNAME");
+           QString crawlerAppDataResourcesDir =  QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+           QString dir = "C:/Users/" + userName+"/AppData/Local/BeatCrawler/resources/";
+           QDir resourcesDir(dir);
+           QStringList args;
+            if(RESOURCES_DIR == "RELEASE")
+            {
 
-            webViewProcess->start("C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/WebView.exe",args);
+                if(resourcesDir.exists())
+                {
+
+                  // qDebug() << resourcesDir.path() +"/" + QString("WebView.exe");
+                   webViewProcess->start(resourcesDir.path() +"/" + QString("WebView.exe"),args);
+                }
+
+            }else
+            {
+                webViewProcess->start(QCoreApplication::applicationDirPath() + "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/"  + QString("WebView.exe"),args);
+
+            }
+
           // webViewProcess->start(QCoreApplication::applicationDirPath()+ "/resources/webview/debug/"+ "WebView.exe",args);
 
            // QString webViewResult = webViewProcess->readAllStandardOutput();
@@ -710,12 +738,16 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
             //keywordsQueueTable();
 
             //worker->getCurrentKeywords();
-            QFuture<void> multithread1  = QtConcurrent::run(this->worker,
-                                         &Worker::getCurrentKeywords);
-            QFuture<void> multithread2  = QtConcurrent::run(this->queueKeywords,
-                                         &QueueKeywords::getCurrentKeywords);
-//            QFuture<void> multithread2  = QtConcurrent::run(this->worker,
-//                                         &Worker::testTimer);
+            QFuture<void> multithread1  = QtConcurrent::run(this->worker, &Worker::getCurrentKeywords);
+            QFuture<void> multithread2  = QtConcurrent::run(this->queueKeywords,&QueueKeywords::getCurrentKeywords);
+            if(ui->checkBox_Enable_AutoMailer->isChecked())
+            {
+               // QFuture<void> multithread3  = QtConcurrent::run(this,&MainWindow::sendMail);
+                sendMail();
+                ui->label_Email_Sent_SMTP->setText("Emails Sent via SMTP: Enabled");
+            }
+
+
 
 
 
@@ -734,7 +766,7 @@ void MainWindow::on_pushButton_Start_clicked(bool checked)
         ui->listWidget_Log_Harvester_Status->clear();
        (*emailRowStartPtr) =0;
        (*emailRowEndPtr) =0;
-        webViewProcess->close();
+        killWebViewProcess();
         emailTableTimer->stop();
         completeHarvestTimer->stop();
          //create a object of value cancel_harvest when we press stop
@@ -1744,11 +1776,23 @@ void MainWindow::populateEmailTable() {
 
     connOpen();
     QSqlQuery *qry = new QSqlQuery(mydb);
-    if(!qry->exec("select * from crawleremails"))
+    if(ui->checkBox_Exclude_Email_Duplicates->isChecked())
     {
-        qDebug() << "Error selecting rows from crawleremails in mainwindow populatetable " << qry->lastError().text();
-        return;
+        if(!qry->exec("select distinct email from crawleremails"))
+        {
+            qDebug() << "Error selecting rows from crawleremails in mainwindow populatetable " << qry->lastError().text();
+            return;
+        }
     }
+    if(!ui->checkBox_Exclude_Email_Duplicates->isChecked())
+    {
+        if(!qry->exec("select * from crawleremails"))
+        {
+            qDebug() << "Error selecting rows from crawleremails in mainwindow populatetable " << qry->lastError().text();
+            return;
+        }
+    }
+
     int fieldNo = qry->record().indexOf("email");
     int num =0;
     while(qry->next())
@@ -1757,8 +1801,11 @@ void MainWindow::populateEmailTable() {
         //qDebug() << qry->value(fieldNo).toString();
         QStandardItem *item = new QStandardItem(qry->value(fieldNo).toString());
         emailTableModel->setItem(num, 0, item);
+        getEmailList << qry->value(fieldNo).toString();
+        autoMailerEmailList << qry->value(fieldNo).toString();
         QEventLoop loop;
-        QTimer::singleShot(1000,&loop,SLOT(quit()));
+        QTimer::singleShot(600,&loop,SLOT(quit()));
+        QApplication::processEvents();
         loop.exec();
         if(ui->checkBox_Delete_Emails->isChecked())
         {
@@ -1818,7 +1865,7 @@ void MainWindow::recieverProxyTableSelection(const QItemSelection &selected, con
 void MainWindow::connOpen()
 {
     mydb = QSqlDatabase::addDatabase("QSQLITE");
-    QString dbPath = getRelativePath("emailtest.db");
+    QString dbPath = getRelativePath("emails.db");
 
     mydb.setDatabaseName(dbPath);
     if(!mydb.open())
@@ -1881,6 +1928,17 @@ void MainWindow::deleteEmailsListTable()
         qDebug() << "Error deleting emails from crawleremails " << qry->lastError().text();
         return;
     }
+    if(!qry->exec("delete from crawlermaileremails"))
+    {
+        qDebug() << "Error deleting emails from crawlermaileremails " << qry->lastError().text();
+        return;
+    }
+
+    if(!qry->exec("UPDATE SQLITE_SEQUENCE SET seq = 0 WHERE name ='crawlermaileremails'"))
+    {
+        qDebug() << "Error sqlite sequence from crawlermaileremails " << qry->lastError().text();
+        return;
+    }
 
     queryModel->setQuery(*qry);
     ui->tableView_Emails->setModel(queryModel);
@@ -1888,6 +1946,7 @@ void MainWindow::deleteEmailsListTable()
     connClose();
     emailTableModel->clear();
     emailListCount.clear();
+    getEmailList.clear();
     delete qry;
     emit emitRemoveEmailList();
 
@@ -2149,32 +2208,41 @@ void MainWindow::clearFiles()
 
 void MainWindow::on_pushButton_Save_Emails_clicked()
 {
-    QString savedEmails;
-    QStringList savedEmailsList;
-    QString fileName = QFileDialog::getSaveFileName(this, "Save Emails", "", "Text files (*.txt)");
-    if (fileName.isEmpty())
+    if(!demoVersion)
     {
-        return;
-    }
-    else
-    {
-        QFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly))
+
+        QString savedEmails;
+        QStringList savedEmailsList;
+        QString fileName = QFileDialog::getSaveFileName(this, "Save Emails", "", "Text files (*.txt)");
+        if (fileName.isEmpty())
         {
-            QMessageBox::information(this, "unable to open file", file.errorString());
             return;
         }
-        QTextStream outStream(&file);
-
-        for (int i = 0; i < setEmailList.size(); i++)
+        else
         {
-            savedEmails = setEmailList.value(i);
-            savedEmailsList << savedEmails.split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
-            outStream << savedEmailsList.value(i) << "\n";
-        }
+            QFile file(fileName);
+            if (!file.open(QIODevice::WriteOnly))
+            {
+                QMessageBox::information(this, "unable to open file", file.errorString());
+                return;
+            }
+            QTextStream outStream(&file);
 
-        file.close();
+            for (int i = 0; i < getEmailList.toSet().toList().size(); i++)
+            {
+                savedEmails = getEmailList.toSet().toList().value(i);
+                savedEmailsList << savedEmails.split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
+                outStream << savedEmailsList.value(i) << "\n";
+            }
+
+            file.close();
+        }
+    }else
+    {
+        QMessageBox::information(this, "Demo Version", "Save feature is disabled in Demo Version " + QString("<a href='http://www.beatcrawler.com'>Purchase Full Version Here</a>"));
+
     }
+
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -2198,7 +2266,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
                 (*emailRowStartPtr) =0;
                 (*emailRowEndPtr) =0;
-                webViewProcess->close();
+                killWebViewProcess();
                 emit emitStopQueueKeywords();
                 emit emitStopWorker();
                 clearFiles();
@@ -2210,12 +2278,23 @@ void MainWindow::closeEvent(QCloseEvent *event)
                     qDebug() << "Error deleting emails from crawleremails " << qry->lastError().text();
                     return;
                 }
+                if(!qry->exec("delete from crawlermaileremails"))
+                {
+                    qDebug() << "Error deleting emails from crawlermaileremails " << qry->lastError().text();
+                    return;
+                }
+                if(!qry->exec("UPDATE SQLITE_SEQUENCE SET seq = 0 WHERE name ='crawlermaileremails'"))
+                {
+                    qDebug() << "Error sqlite sequence from crawlermaileremails " << qry->lastError().text();
+                    return;
+                }
+
 
                 queryModel->setQuery(*qry);
                 connClose();
                 delete qry;
-                QProcess::execute("taskkill /im BeatCrawler.exe /f");
-                QProcess::execute("taskkill /im WebView.exe /f");
+                killBeatCrawlerProcess();
+                killWebViewProcess();
 
                 event->accept();
 
@@ -2239,9 +2318,396 @@ QString MainWindow::getRelativePath(QString fileName)
    // qDebug() << QCoreApplication::applicationDirPath()+ "/resources/";
     //C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/resources/
     //return QCoreApplication::applicationDirPath()+ "/resources/"+ fileName;
-  #ifdef DEBUG_APP
-    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
-     #else
-    return "/resources/" + fileName;
-  #endif
+
+    QString userName =  qgetenv("USERNAME");
+    QString crawlerAppDataResourcesDir =  QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+    QString dir = "C:/Users/" + userName+"/AppData/Local/BeatCrawler/resources/";
+    QDir resourcesDir(dir);
+    QStringList args;
+    if(RESOURCES_DIR == "RELEASE")
+    {
+
+
+        if(resourcesDir.exists())
+        {
+            return resourcesDir.path() + "/" +fileName;
+        }
+
+    }else
+    {
+        return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
+    }
+
+
+}
+
+
+bool MainWindow::findSpintax(char *s, char *&from, char *&to)
+{
+    if(!s) return false;
+    from = s;
+    char *temp = to = NULL;
+    while(!to)
+    {
+        if(!(from = strchr(from,     '{'))) return false; // Find opening bracket
+        if(!(to   = strchr(from,     '}'))) return false; // Find closing bracket
+             temp = strchr(from + 1, '{');                // Check if there's any other opening bracket between the first one and closing bracket
+        if(temp && temp < to)                             // If so start over from that other bracket
+        {
+            from = temp;
+            to = NULL;
+        }
+        else return true;                                 // Otherwise lets say we've got it
+    }
+    return false;
+}
+
+void MainWindow::_textSpin(char *from, char *to)
+{
+    unsigned element = 0;
+    char *pos1 = from, *pos2 = NULL;
+    while((pos1 = strchr(pos1 + 1, '|')) && pos1 < to) ++element;
+    element = rand() % (element + 1);
+    pos1 = from;
+    for(unsigned i = 0; i < element; ++i) pos1 = strchr(pos1 + 1, '|');
+    ++pos1; pos2 = strchr(pos1, '|');
+    if(!pos2 || pos2 >= to) pos2 = to;
+    --pos2;
+    strcpy(from, pos1);
+    strcpy(pos2 + 1 - (pos1 - from), to - (pos1 - from) + 1);
+}
+
+void MainWindow::textSpin(char *s)
+{
+    if(!s) return;
+    char *from, *to;
+    while(findSpintax(s, from, to)) _textSpin(from, to);
+}
+
+void MainWindow::sendTestEmail()
+{
+            QByteArray mailerTextBody = ui->plainTextEdit_Mailer_Body->toPlainText().toLatin1();
+            textSpin( mailerTextBody.data());
+
+            QByteArray mailerTextSubject = ui->lineEdit_Mailer_Subject->text().toLatin1();
+            textSpin( mailerTextSubject.data());
+
+
+            Smtp* smtp = new Smtp(ui->lineEdit_Mailer_Login->text(), ui->lineEdit_Mailer_Password->text(),
+                           ui->lineEdit_Mailer_SMTP_Server->text(), ui->spinBox_Mailer_SMTP_Port->text().toInt());
+            connect(smtp, SIGNAL(status(QString)), this, SLOT(mailSent(QString)));
+            smtp->sendMail(ui->lineEdit_Mailer_Login->text(), ui->lineEdit_Mailer_Email_Provider->text() ,
+                           mailerTextSubject.data(),mailerTextBody.data());
+            mailerEmailSent = ui->lineEdit_Mailer_Email_Provider->text();
+           // qDebug() << ba.data();
+
+            ui->textBrowser_Preview_Mailer_Message->setPlainText
+                    (
+                      // QString("From: ") + ui->lineEdit_Mailer_Login->text() + "\n" +
+                       QString("Subject: ") + mailerTextSubject.data() +"\n\n"+
+                       mailerTextBody.data()
+
+                    );
+
+}
+
+void MainWindow::sendMail()
+{
+
+    QStringList emailsSent;
+    QHash<QString, int> emailListSentHash;
+    int trackSentEmails =1;
+
+
+    for(;;){
+
+
+        connOpen();
+        QSqlQuery *qry = new QSqlQuery(mydb);
+        if(!qry->exec("select * from crawlermaileremails where id= '"+ QString::number(trackSentEmails)+"' "))
+        {
+            qDebug() << "Error selecting rows from crawleremails in mainwindow sendEmail " << qry->lastError().text();
+            return;
+        }
+        QEventLoop loop;
+
+        if(ui->checkBox_Mailer_Timer_Delayed->isChecked())
+        {
+            QTimer::singleShot(ui->checkBox_Mailer_Timer_Delayed->text().toInt()*1000,&loop,SLOT(quit()));
+
+        }
+        if(!ui->checkBox_Mailer_Timer_Delayed->isChecked())
+        {
+            QTimer::singleShot(5000,&loop,SLOT(quit()));
+
+        }
+        loop.exec();
+       // qDebug() << "track emails counter " << trackSentEmails;
+        // If theres more results, send email, and increment counter
+        while(qry->next())
+        {
+
+
+//            for(unsigned i = 0; i < 20; ++i)
+//            {
+//                char foo[] = "This a Spintax {demo|demonstration}. It{{'s| is} showing| shows} how it works";
+//                textSpin(foo);
+
+//                qDebug() <<  "Result " << i << foo;
+//            }
+            QByteArray mailerTextBody = ui->plainTextEdit_Mailer_Body->toPlainText().toLatin1();
+            textSpin( mailerTextBody.data());
+
+            QByteArray mailerTextSubject = ui->lineEdit_Mailer_Subject->text().toLatin1();
+            textSpin( mailerTextSubject.data());
+
+
+            Smtp* smtp = new Smtp(ui->lineEdit_Mailer_Login->text(), ui->lineEdit_Mailer_Password->text(),
+                           ui->lineEdit_Mailer_SMTP_Server->text(), ui->spinBox_Mailer_SMTP_Port->text().toInt());
+            connect(smtp, SIGNAL(status(QString)), this, SLOT(mailSent(QString)));
+            smtp->sendMail(ui->lineEdit_Mailer_Login->text(), qry->value(1).toString() ,
+                           mailerTextSubject.data(),mailerTextBody.data());
+           // qDebug() << ba.data();
+
+            ui->textBrowser_Preview_Mailer_Message->setPlainText
+                    (
+                      // QString("From: ") + ui->lineEdit_Mailer_Login->text() + "\n" +
+                       QString("Subject: ") + mailerTextSubject.data() +"\n\n"+
+                       mailerTextBody.data()
+
+                    );
+           mailerEmailSent = qry->value(1).toString();
+           qDebug() << qry->value(1).toString();
+           trackSentEmails++;
+
+           if(!clickedStartStopButton)
+           {
+               break;
+           }
+
+        }
+
+        if(!clickedStartStopButton)
+        {
+            break;
+        }
+        delete qry;
+        connClose();
+
+}
+
+
+
+
+
+
+
+}
+
+void MainWindow::mailSent(QString status)
+{
+
+    if(status == "Message sent")
+    {
+       // mailerLog.append(status);
+       ui->listWidget_Mailer_Log->addItem(status +" to "+ QString(mailerEmailSent));
+    }
+    else
+    {
+       //ui->listWidget_Mailer_Log->addItem(status);
+    }
+
+}
+
+void MainWindow::on_pushButton_Mailer_Test_clicked()
+{
+   ui->pushButton_Mailer_Test->setDisabled(true);
+   QTimer::singleShot(4000, this, SLOT(reEnableMailerTestButton()));
+
+   sendTestEmail();
+
+}
+
+void MainWindow::reEnableMailerTestButton() {
+    ui->pushButton_Mailer_Test->setDisabled(false);
+}
+
+
+void MainWindow::killWebViewProcess()
+{
+    QProcess::execute("taskkill /im WebView.exe /f");
+    webViewProcess->close();
+
+}
+
+void MainWindow::killBeatCrawlerProcess()
+{
+
+    QProcess::execute("taskkill /im BeatCrawler.exe /f");
+    close();
+}
+
+/*****
+ Enter serial
+ Post serial and email to server
+*****/
+void MainWindow::on_pushButton_Enter_Serial_clicked()
+{
+    QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
+    connect(mgr,SIGNAL(finished(QNetworkReply *)),this, SLOT(onSerialValidationFinish(QNetworkReply *)));
+    connect(mgr,SIGNAL(finished(QNetworkReply *)),mgr,SLOT(deleteLater()));
+    QUrlQuery postData;
+    if(!ui->lineEdit_Enter_License_Serial->text().isEmpty()
+       && !ui->lineEdit_Enter_License_Email->text().isEmpty()
+       )
+    {
+        postData.addQueryItem("sn",ui->lineEdit_Enter_License_Serial->text());
+        postData.addQueryItem("email",ui->lineEdit_Enter_License_Email->text());
+
+
+        QNetworkRequest req(QUrl("http://beatcrawler.com/license/license_validate.php"));
+        req.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
+        req.setRawHeader( "User-Agent" , "Mozilla Firefox" );
+
+        mgr->post(req,postData.toString(QUrl::FullyEncoded).toUtf8());
+
+    }
+
+}
+
+/*****
+ Server checks if serial matches serial that was predefined by us, if issues error response
+ Server checks if serial is being used by anyone else, if issues error response
+ If both  above conditions are false, license is valid, and demoVersion is set to false
+
+*****/
+void MainWindow::onSerialValidationFinish(QNetworkReply * rep)
+{
+    QString data = rep->readAll();
+    QJsonObject obj;
+    QJsonDocument jsonDocument;
+    QFile file;
+    if(data.toInt() == 601)
+    {
+        //License valid
+        qDebug() << "License valid: " << data.toInt();
+        QMessageBox::information(this, "License Validation", "Thank you, Successfully Validated License");
+        ui->groupBox_Register_License->setDisabled(true);
+        ui->label_licensedUser->setText("Licensed User: " + QString(ui->lineEdit_Enter_License_Email->text()));
+
+        if(!ui->lineEdit_Enter_License_Serial->text().isEmpty()
+           && !ui->lineEdit_Enter_License_Email->text().isEmpty()
+           )
+        {
+
+            /****Creates license json objects (email,serial number)**/
+            obj.insert("Email",QJsonValue(ui->lineEdit_Enter_License_Email->text()).toString());
+            obj.insert("SN",QJsonValue(ui->lineEdit_Enter_License_Serial->text()).toString());
+
+            QDir dir("/resources");
+            QString filename = getRelativePath("license.json");
+
+            file.setFileName(filename);
+            if(!file.open(QIODevice::WriteOnly)){
+                qDebug() << "Error opening license jsson file in mainwindow " << file.errorString();
+                return;
+            }
+            jsonDocument.setObject(obj);
+            file.write(jsonDocument.toJson());
+            file.close();
+            demoVersion = false;
+        }
+
+
+
+
+    }else{
+        //License invalid
+        qDebug() << "License invalid: " << data;
+        QMessageBox::information(this, "License Validation", "Invalid, Please try again, or purchase a license.");
+        demoVersion = true;
+
+    }
+
+}
+
+/*****
+ On initialization of app:
+ Read json license object
+ Post serial and email to server
+*****/
+void MainWindow::onInitEnableFullFeatures()
+{
+    QString val;
+    QFile file;
+    QString licenseJsonFile = getRelativePath("license.json");
+
+    file.setFileName(licenseJsonFile);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
+        qDebug() << "Error opening  license json file in mainwindow " <<  file.errorString();
+    }
+    val = file.readAll();
+    file.close();
+
+    QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
+    QJsonObject jsonObject = d.object();
+    QString email = jsonObject.value(QString("Email")).toString();
+    QString serial = jsonObject.value(QString("SN")).toString();
+
+    licensedUser.insert(0,email);
+    licensedUser.insert(1,serial);
+
+
+    QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
+    connect(mgr,SIGNAL(finished(QNetworkReply *)),this, SLOT(onInitSerialValidationFinish(QNetworkReply *)));
+    connect(mgr,SIGNAL(finished(QNetworkReply *)),mgr,SLOT(deleteLater()));
+    QUrlQuery postData;
+    postData.addQueryItem("sn",serial);
+    postData.addQueryItem("email",email);
+    postData.addQueryItem("validate","validate");
+
+
+    QNetworkRequest req(QUrl("http://beatcrawler.com/license/init_license_validate.php"));
+    req.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
+    req.setRawHeader( "User-Agent" , "Mozilla Firefox" );
+
+    mgr->post(req,postData.toString(QUrl::FullyEncoded).toUtf8());
+
+}
+
+
+/*****
+ Server checks if serial matches serial that was predefined by us, if issues error response
+ Server checks if serial is being used by anyone else, if issues error response
+ If both  above conditions are false, license is valid, and demoVersion is set to false
+
+*****/
+void MainWindow::onInitSerialValidationFinish(QNetworkReply * reply)
+{
+    QString data = reply->readAll();
+    if(data.toInt() == 601)
+    {
+        demoVersion = false;
+        setWindowTitle("Beat Crawler V1.0.9 (C) Beatcrawler.com");
+        ui->groupBox_Register_License->setDisabled(true);
+        ui->lineEdit_Enter_License_Email->setText(licensedUser.value(0));
+        ui->lineEdit_Enter_License_Serial->setText(licensedUser.value(1));
+        ui->label_licensedUser->setText("Licensed User: " + QString(licensedUser.value(0)));
+
+
+
+    }else
+    {
+        demoVersion = true;
+    }
+}
+void MainWindow::on_checkBox_Enable_AutoMailer_clicked()
+{
+    if(demoVersion)
+    {
+        ui->checkBox_Enable_AutoMailer->setChecked(false);
+        QMessageBox::information(this, "Demo Version", "Auto Mailer feature is disabled in Demo Version " + QString("<a href='http://www.beatcrawler.com'>Purchase Full Version Here</a>"));
+
+    }
 }

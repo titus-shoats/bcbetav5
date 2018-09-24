@@ -136,16 +136,16 @@ void Worker::receiverStopWorker(){
 
 void Worker::connOpen()
 {
-    mydb = QSqlDatabase::addDatabase("QSQLITE");
-    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
-    if(!mydb.open())
-    {
-        qDebug() << "Error connecting to database";
-        return;
-    }else
-    {
-      qDebug() << "Successfully connected to database";
-    }
+//    mydb = QSqlDatabase::addDatabase("QSQLITE");
+//    mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emails.db");
+//    if(!mydb.open())
+//    {
+//        qDebug() << "Error connecting to database";
+//        return;
+//    }else
+//    {
+//      qDebug() << "Successfully connected to database";
+//    }
 }
 
 void Worker::connClose()
@@ -244,5 +244,23 @@ QString Worker::getRelativePath(QString fileName)
    // qDebug() << QCoreApplication::applicationDirPath()+ "/resources/";
     //C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_64bit2-Debug/debug/resources/
     //return QCoreApplication::applicationDirPath()+ "/resources/"+ fileName;
-    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+    QString userName =  qgetenv("USERNAME");
+    QString crawlerAppDataResourcesDir =  QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+    QString dir = "C:/Users/" + userName+"/AppData/Local/BeatCrawler/resources/";
+    QDir resourcesDir(dir);
+    QStringList args;
+    if(RESOURCES_DIR == "RELEASE")
+    {
+
+
+        if(resourcesDir.exists())
+        {
+            return resourcesDir.path() + "/" +fileName;
+        }
+
+    }else
+    {
+        return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
+    }
 }

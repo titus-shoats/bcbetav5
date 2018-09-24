@@ -13,7 +13,10 @@
 #include <QMutex>
 #include <QThread>
 #include <QTextStream>
-#include <config.h>
+#include "config.h"
+#include <QStandardPaths>
+#include <QDir>
+
 
 
 namespace Ui {

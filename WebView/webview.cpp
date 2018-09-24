@@ -4,14 +4,10 @@
 
 WebView::WebView(QWidget *parent)
     : QWebView(parent)
-    , inLoading(false),emailListFile(new QFile()),emailList(new QStringList()),
-      readEmailFile(new QFile())
+
 {
-    connect(this, SIGNAL(loadStarted()), this, SLOT(newPageLoading()));
-    connect(this, SIGNAL(loadFinished(bool)), this, SLOT(pageLoaded(bool)));
-    page()->setPreferredContentsSize(QSize(600, 768));
-    openEmailListFile(emailListFile);
-    readEmailListFile(readEmailFile);
+
+
     connOpen();
     workerCounterNum =0;
     workerCounterPtr = &workerCounterNum;
@@ -25,17 +21,13 @@ WebView::WebView(QWidget *parent)
     httpStatusPtr =&httpStatusNum;
     connect(this,&WebView::emitWebViewLog,&this->worker,&Worker::receiverWebViewLog);
 
-    initProxyListSettings();
+    initSettings();
     replyUrl = new QString();
 }
 
 WebView::~WebView(){
 
     delete replyUrl;
-    emailListFile->close();
-    delete emailListFile;
-    delete emailList;
-    delete readEmailFile;
     delete proxies;
     connClose();
     harvestStatus("HARVEST_ABORTED");
@@ -59,46 +51,15 @@ void WebView::harvestStatus(QString status)
     harvestStatusFile.close();
 
 }
-void WebView::openEmailListFile(QFile * emailListFile){
-
-//    emailListFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailList.txt");
-//    if(! emailListFile->open(QIODevice::WriteOnly | QIODevice::Text)){
-//        qDebug() << "Error opening keyword file in worker";
-//        return;
-//    }
-}
-
-void WebView::readEmailListFile(QFile * readEmailFile) const
-{
-
-//    readEmailFile->setFileName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailList.txt");
-//    if(! readEmailFile->open(QIODevice::ReadOnly | QIODevice::Text)){
-//        qDebug() << "Error opening email file in webview";
-//        return;
-//    }
-}
 
 
 void WebView::paintEvent(QPaintEvent *event)
 {
-    if (inLoading && loadingTime.elapsed() < 750) {
-        QPainter painter(this);
-        painter.setBrush(Qt::white);
-        painter.setPen(Qt::NoPen);
-        foreach (const QRect &rect, event->region().rects()) {
-            painter.drawRect(rect);
-        }
-    } else {
-        QWebView::paintEvent(event);
-    }
+
 }
 
-void WebView::newPageLoading()
-{
-    inLoading = true;
-    loadingTime.start();
-}
-void WebView::initProxyListSettings()
+
+void WebView::initSettings()
 {
     QList <QString> *proxyServersJson;
     proxyServersJson = new QList<QString>();
@@ -210,7 +171,7 @@ void WebView::initProxyListSettings()
 
 
 // Rotates proxy with a specified interval, and rotate due to a httpStatus Code
-void WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
+void WebView::proxyListRotater(QStringList proxyServersList)
 {
 
 
@@ -287,834 +248,741 @@ void WebView::proxyListRotater(QStringList proxyServersList,QWebPage *page)
 
             if(!proxyServersList.isEmpty())
             {
-                QNetworkProxy networkProxy;
-               // networkProxy.setType(QNetworkProxy::Socks5Proxy);
-                networkProxy.setUser("username");
-                networkProxy.setPassword("password");
-                networkProxy.setType(QNetworkProxy::HttpProxy);
-                QUrl proxy("http://" + *proxies);
-                networkProxy.setHostName(proxy.host());
-                networkProxy.setPort(static_cast<quint16>(proxy.port()));
-                page->networkAccessManager()->setProxy(networkProxy);
-                emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
-                qDebug() << "List --> " << proxyServersList;
 
-                qDebug() << "Rotating Proxy--> " << *proxies;
+//                QUrl proxy("http://" + *proxies);
+//                networkProxy.setHostName(proxy.host());
+//                networkProxy.setPort(static_cast<quint16>(proxy.port()));
 
-               if(!proxy.host().isEmpty())
-               {
-                   qDebug() << "Proxy host --> "<<proxy.host();
-               }
-               if(proxy.port() != -1)
-               {
-                   qDebug() << "Proxy port --> "<<proxy.port();
-               }
+//                emit emitWebViewLog(QString("Using Proxy: ") + QString(proxy.host()));
+//                qDebug() << "List --> " << proxyServersList;
+
+//                qDebug() << "Rotating Proxy--> " << *proxies;
+
+//               if(!proxy.host().isEmpty())
+//               {
+//                   qDebug() << "Proxy host --> "<<proxy.host();
+//               }
+//               if(proxy.port() != -1)
+//               {
+//                   qDebug() << "Proxy port --> "<<proxy.port();
+//               }
             }
 
     }// end of if proxy is empty
 
 }
 
-void WebView::view1Page(QWebPage *page)
+void WebView::view1Page(QString url)
 {
 
         if(!proxyList1.isEmpty())
         {
-             proxyListRotater(proxyList1,page);
+             proxyListRotater(proxyList1);
         }
+        CurlEasy *curl = new CurlEasy;
+        std::string urlString = url.toStdString();
 
-    connect(this, &QWebView::loadFinished, [this,page](bool success) {
-
-        connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply * )),
-                             this,SLOT(view1HttpResponseFinished(QNetworkReply *)));
-
-        if (!success)
-        {
-           // qDebug() << "Could not load page Multi Instance 1";
+        curl->set(CURLOPT_URL, urlString.c_str());
+        if (!proxies->isEmpty()) {
+            curl->set(CURLOPT_PROXY, proxies->toStdString().c_str());
         }
-       if(success) {
+        if (proxies->isEmpty()) {
+            curl->set(CURLOPT_PROXY, NULL);
+        }
+        curl->set(CURLOPT_FOLLOWLOCATION, 1L); // Tells libcurl to follow HTTP 3xx redirects
+        curl->set(CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl->perform();
 
-            QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
-            QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
-            QRegularExpressionMatch match;
-            QStringList words;
-            QString word;
-            int num = 0;
-            connOpen();
-           // mydb = QSqlDatabase::addDatabase("QSQLITE");
-          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
-            if(!mydb.open())
-            {
-                qDebug() << "Error connecting to database";
-                return;
-            }else
-            {
-              qDebug() << "Successfully connected to database";
-            }
-            QSqlQuery qry;
-            while (i.hasNext()) {
-                QRegularExpressionMatch match = i.next();
-                if (!match.captured(0).isEmpty())
-                    word = match.captured(0);
-                if (!word.isEmpty()) {
-                    words << word;
-                    if (!words.value(num).isEmpty())
+        curl->setWriteFunction([this](char *data, size_t size)->size_t {
 
+
+                //If response is not 200, obviously we wont get any emails,
+                // but were only going to parse emails, only
+                // so this means, we only get emails if::
+                //1 reponse code is 200
+
+                // qDebug() << "Data from google.com: " << QByteArray(data, static_cast<int>(size));
+                QByteArray response(data, static_cast<int>(size));
+                QString responseString = QString(response);
+                QString plainText = QTextDocumentFragment::fromHtml(responseString).toPlainText();
+
+
+                QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
+
+                QRegularExpressionMatchIterator i = re.globalMatch(plainText);
+                QRegularExpressionMatch match;
+                QStringList words;
+                QString word;
+                int num = 0;
+
+                mydb = QSqlDatabase::addDatabase("QSQLITE");
+                QString dbFileName = getRelativePath("emails.db");
+                mydb.setDatabaseName(dbFileName);
+                if(!mydb.open())
+               {
+                   qDebug() << "Error connecting to database";
+
+               }else
+               {
+                 qDebug() << "Successfully connected to database";
+               }
+               QSqlQuery qry;
+
+               while (i.hasNext()) {
+                   QRegularExpressionMatch match = i.next();
+                   if (!match.captured(0).isEmpty())
+                       word = match.captured(0);
+                   if (!word.isEmpty()) {
+                       words << word;
+                       if (!words.value(num).isEmpty())
+
+                       {
+                           if(!qry.exec("insert into crawleremails(email) values('"+words.value(num)+"')"))
+                           {
+                               qDebug() << "Error inserting crawleremails into database:: " <<
+                                           qry.lastError().text();
+
+
+                           }else
+                           {
+                               qDebug() <<  "Successfully inserted crawler emails-->" << words.value(num);
+                           }
+                           if(!qry.exec("insert into crawlermaileremails(maileremails) values('"+words.value(num)+"')"))
+                           {
+                               qDebug() << "Error inserting crawlermaileremails into database:: " <<
+                                           qry.lastError().text();
+
+
+                           }else
+                           {
+                              // qDebug() <<  "Successfully inserted crawlermaileremails-->" << words.value(num);
+                           }
+
+                       }
+                       num++;
+
+                   } // end words !empty
+
+               } // end while
+            // connClose();
+               mydb.removeDatabase(QSqlDatabase::database().connectionName());
+               mydb.close();
+
+
+                return size;
+        });// end setWriteFunction
+
+
+        connect(curl, &CurlEasy::done, [curl, this](CURLcode result) {
+                long httpResponseCode = curl->get<long>(CURLINFO_RESPONSE_CODE);
+
+                QString effectiveUrl = curl->get<const char*>(CURLINFO_EFFECTIVE_URL);
+
+                /*********HTTP CODE*******/
+                // Log errors,or show message to user if response code is not 200
+                if (httpResponseCode == 200 && result == CURLE_OK)
+                {
+
+                    qDebug() << " Thread 1 HTTP  Code-->" << httpResponseCode;
+                    qDebug() << "Result--->" << result;
+
+                    harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
+                    emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(effectiveUrl));
+
+                }
+
+                if (httpResponseCode == 503) {
+
+                    qDebug() << "503 ERROR CODE ";
+                    harvestStatus("HARVEST_HTTP_STATUS_ERROR");
+                    emit emitWebViewLog(QString("HTTP Status: 503 Request Error")  +" "+ QString(effectiveUrl));
+
+                }
+
+                if (result != CURLE_OK)
+                {
+
+                    switch (result)
                     {
-                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
-                        {
-                            qDebug() << "Error inserting emails into database:: " <<
-                                        qry.lastError().text();
-
-                            return;
-                        }else
-                        {
-                            qDebug() <<  "Successfully inserted emails-->" << words.value(num);
-                        }
+                    case 5: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                        emit emitWebViewLog( QString("Couldn't resolve proxy. The given proxy host could not be resolved." ) +" "+ QString(effectiveUrl));
+                        break;
+                    case 7: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
 
 
-//                       QSqlQuery query("SELECT * FROM crawleremails where email = '"+words.value(num)+"' " );
-//                       int fieldNo = query.record().indexOf("email");
-//                       int count =0;
-//                       while (query.next())
-//                       {
-//                           count++;
-//                          if(words.value(num) ==  query.value(fieldNo).toString())
-//                          {
-//                              qDebug() << "Duplicate exist";
-//                              return;
-//                          }else
-//                          {
-//                              if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
-//                              {
-//                                  qDebug() << "Error inserting emails into database";
-//                                  return;
-//                              }
-//                          }
+                        emit emitWebViewLog( QString(" Failed to connect() to host or proxy.") +" "+ QString(effectiveUrl));
+                        break;
+                    case 35: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                        emit emitWebViewLog( QString("A problem occurred somewhere in the SSL/TLS handshake." ) +" "+ QString(effectiveUrl));
+                        break;
+                    case 56: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                        emit emitWebViewLog( QString("Failure with receiving network data." ) +" "+ QString(effectiveUrl));
+                        break;
 
-//                       }
 
+                    default: qDebug() << "Default Switch Statement Curl Code--> " << result;
 
                     }
-                    num++;
+                    /**************
+                    *checks curl erros codes
+                    *
+                    * 5 -- Couldn't resolve proxy. The given proxy host could not be resolved.
+                    * 7 -- Failed to connect() to host or proxy.
+                    *
+                    *********/
+                    if (result == 5 || result == 7 || result == 35)
+                    {
+                        emit emitWebViewLog(QString("Proxy Error ")  +" "+ QString(effectiveUrl));
 
-                } // end words !empty
+                    }
 
-            } // end while
-          connClose();
-        }
-
-   });
-}
-void WebView::view1HttpResponseFinished(QNetworkReply * reply)
-{
-    int httpStatusCode;
-    QUrl url(reply->url());
-    httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-
-    if(httpStatusCode <200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage1ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-    if(httpStatusCode ==200)
-    {
-        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
-        viewPage1ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    if(httpStatusCode> 200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage1ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    switch(reply->error())
-    {
-    case QNetworkReply::NoError:
-         // No error
-         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-         return;
-    case QNetworkReply::ContentNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Content Not Found"));
-        break;
-    case QNetworkReply::ConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
-                             +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::TimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::HostNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionClosedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyTimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    default:
-        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-    }
+               }
 
 
 
+          }); // end of lambda
+        connect(curl, SIGNAL(done(CURLcode)), curl, SLOT(deleteLater()));
 
-//    switch (httpStatusCode)
-//    {
-
-//       case 200:
-//             emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded \n"));
-//            *httpStatusPtr = httpStatusCode;
-//            viewPage1ProxyRotate = false;
-//      break;
-//      case 301:
-//             emit emitWebViewLog(QString("HTTP Status: 301 Redirect rotating proxy, " +
-//                                       QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-
-//        break;
-//      case 302:
-//            emit emitWebViewLog(QString("HTTP Status: 302 Redirect, rotating proxy " +
-//                                       QString(proxies.host() +" \n")));
-//           *httpStatusPtr = httpStatusCode;
-//           viewPage1ProxyRotate = true;
-//       break;
-//      case 304:
-//        emit emitWebViewLog(QString("HTTP Status: 304 Redirect, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-//      case 400:
-//        emit emitWebViewLog(QString("HTTP Status: 400 Bad Request, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//            viewPage1ProxyRotate = true;
-//       break;
-//      case 403:
-//        emit emitWebViewLog(QString("HTTP Status: 403 Forbidden, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-//      case 404:
-//        emit emitWebViewLog(QString("HTTP Status: 404 Not Found, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-//      case 500:
-//        emit emitWebViewLog(QString("HTTP Status: 500 Internal Server Error rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-
-//      case 502:
-//        emit emitWebViewLog(QString("HTTP Status: 502 Bad Gateway, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//           *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-//      case 503:
-//        emit emitWebViewLog(QString("HTTP Status: 503 Service Unavailable, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//            *httpStatusPtr = httpStatusCode;
-//             viewPage1ProxyRotate = true;
-//       break;
-
-//        default:
-//        emit emitWebViewLog(QString("HTTP Status: Void, rotating proxy " +
-//                                   QString(proxies.host() +" \n")));
-//        viewPage1ProxyRotate = true;
-//    }
-//    switch(reply->error())
-//    {
-//    case QNetworkReply::NoError:
-//         // No error
-//         return;
-//    case QNetworkReply::ContentNotFoundError:
-//        failedUrl = reply->url();
-//        httpStatusCode = reply->attribute(
-//                QNetworkRequest::HttpStatusCodeAttribute).toInt();
-//        break;
-//    case QNetworkReply::ConnectionRefusedError:
-//        emit emitWebViewLog(QString("The remote server refused the connection (the server is not accepting requests. \n"));
-//        break;
-//    case QNetworkReply::TimeoutError:
-//        emit emitWebViewLog(QString("The connection to the remote server timed out \n"));
-//        break;
-//    case QNetworkReply::HostNotFoundError:
-//        emit emitWebViewLog(QString("The host was not found \n"));
-//        break;
-//    case QNetworkReply::ProxyConnectionClosedError:
-//        emit emitWebViewLog(QString("Proxy Connection Error \n"));
-//        break;
-//    case QNetworkReply::ProxyConnectionRefusedError:
-//        emit emitWebViewLog(QString("Proxy Refused Error \n"));
-//        break;
-
-//    case QNetworkReply::ProxyNotFoundError:
-//        emit emitWebViewLog(QString("Proxy Not Found \n"));
-//        break;
-
-//    case QNetworkReply::ProxyTimeoutError:
-//        emit emitWebViewLog(QString("Proxy Timedout Error \n"));
-//        break;
-
-//    }
 
 }
 
 
-void WebView::view2Page(QWebPage *page)
+void WebView::view2Page(QString url)
 {
+
+
     if(!proxyList2.isEmpty())
     {
-         proxyListRotater(proxyList2,page);
+         proxyListRotater(proxyList2);
     }
+    CurlEasy *curl = new CurlEasy;
+    std::string urlString = url.toStdString();
+
+    curl->set(CURLOPT_URL, urlString.c_str());
+    if (!proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, proxies->toStdString().c_str());
+    }
+    if (proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, NULL);
+    }
+    curl->set(CURLOPT_FOLLOWLOCATION, 1L); // Tells libcurl to follow HTTP 3xx redirects
+    curl->set(CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl->perform();
+
+    curl->setWriteFunction([this](char *data, size_t size)->size_t {
 
 
-    connect(this, &QWebView::loadFinished, [this,page](bool success) {
+            //If response is not 200, obviously we wont get any emails,
+            // but were only going to parse emails, only
+            // so this means, we only get emails if::
+            //1 reponse code is 200
 
-        connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply *)),
-                this,SLOT(view2HttpResponseFinished(QNetworkReply *)));
-        if (!success)
-        {
-            //qDebug() << "Could not load page view 2";
-        }
-       if(success) {
-
-           // qDebug() << "Page  loaded view 2";
+            // qDebug() << "Data from google.com: " << QByteArray(data, static_cast<int>(size));
+            QByteArray response(data, static_cast<int>(size));
+            QString responseString = QString(response);
+            QString plainText = QTextDocumentFragment::fromHtml(responseString).toPlainText();
 
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
-            QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
+
+            QRegularExpressionMatchIterator i = re.globalMatch(plainText);
             QRegularExpressionMatch match;
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
-          //  mydb = QSqlDatabase::addDatabase("QSQLITE");
-          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            QString dbFileName = getRelativePath("emails.db");
+            mydb.setDatabaseName(dbFileName);
             if(!mydb.open())
+           {
+               qDebug() << "Error connecting to database";
+
+           }else
+           {
+             qDebug() << "Successfully connected to database";
+           }
+           QSqlQuery qry;
+
+           while (i.hasNext()) {
+               QRegularExpressionMatch match = i.next();
+               if (!match.captured(0).isEmpty())
+                   word = match.captured(0);
+               if (!word.isEmpty()) {
+                   words << word;
+                   if (!words.value(num).isEmpty())
+
+                   {
+                       if(!qry.exec("insert into crawleremails(email) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawleremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                           qDebug() <<  "Successfully inserted crawler emails-->" << words.value(num);
+                       }
+                       if(!qry.exec("insert into crawlermaileremails(maileremails) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawlermaileremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                          // qDebug() <<  "Successfully inserted crawlermaileremails-->" << words.value(num);
+                       }
+
+                   }
+                   num++;
+
+               } // end words !empty
+
+           } // end while
+        // connClose();
+           mydb.removeDatabase(QSqlDatabase::database().connectionName());
+           mydb.close();
+
+
+            return size;
+    });// end setWriteFunction
+
+
+    connect(curl, &CurlEasy::done, [curl, this](CURLcode result) {
+            long httpResponseCode = curl->get<long>(CURLINFO_RESPONSE_CODE);
+
+            QString effectiveUrl = curl->get<const char*>(CURLINFO_EFFECTIVE_URL);
+
+            /*********HTTP CODE*******/
+            // Log errors,or show message to user if response code is not 200
+            if (httpResponseCode == 200 && result == CURLE_OK)
             {
-                qDebug() << "Error connecting to database";
-                return;
-            }else
-            {
-              qDebug() << "Successfully connected to database";
+
+                qDebug() << " Thread 2 HTTP  Code-->" << httpResponseCode;
+                qDebug() << "Result--->" << result;
+
+                harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
+                emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(effectiveUrl));
+
             }
-            QSqlQuery qry;
-            while (i.hasNext()) {
-                QRegularExpressionMatch match = i.next();
-                if (!match.captured(0).isEmpty())
-                    word = match.captured(0);
-                if (!word.isEmpty()) {
-                    words << word;
-                    if (!words.value(num).isEmpty())
 
-                    {
-                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
-                        {
-                            qDebug() << "Error inserting emails into database:: " <<
-                                        qry.lastError().text();
-                            return;
-                        }else
-                        {
-                            qDebug() <<  "Successfully inserted emails-->" << words.value(num);
-                        }
+            if (httpResponseCode == 503) {
 
+                qDebug() << "503 ERROR CODE ";
+                harvestStatus("HARVEST_HTTP_STATUS_ERROR");
+                emit emitWebViewLog(QString("HTTP Status: 503 Request Error")  +" "+ QString(effectiveUrl));
 
-//                       QSqlQuery query("SELECT * FROM crawleremails where email = '"+words.value(num)+"' " );
-//                       int fieldNo = query.record().indexOf("email");
-//                       int count =0;
-//                       while (query.next())
-//                       {
-//                           count++;
-//                          if(words.value(num) ==  query.value(fieldNo).toString())
-//                          {
-//                              qDebug() << "Duplicate exist";
-//                              return;
-//                          }else
-//                          {
-//                              if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
-//                              {
-//                                  qDebug() << "Error inserting emails into database";
-//                                  return;
-//                              }
-//                          }
+            }
 
-//                       }
+            if (result != CURLE_OK)
+            {
+
+                switch (result)
+                {
+                case 5: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Couldn't resolve proxy. The given proxy host could not be resolved." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 7: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
 
 
-                    }
-                    num++;
+                    emit emitWebViewLog( QString(" Failed to connect() to host or proxy.") +" "+ QString(effectiveUrl));
+                    break;
+                case 35: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("A problem occurred somewhere in the SSL/TLS handshake." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 56: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Failure with receiving network data." ) +" "+ QString(effectiveUrl));
+                    break;
 
-                } // end words !empty
 
-            } // end while
-          connClose();
-        }
+                default: qDebug() << "Default Switch Statement Curl Code--> " << result;
 
-   });
+                }
+                /**************
+                *checks curl erros codes
+                *
+                * 5 -- Couldn't resolve proxy. The given proxy host could not be resolved.
+                * 7 -- Failed to connect() to host or proxy.
+                *
+                *********/
+                if (result == 5 || result == 7 || result == 35)
+                {
+                    emit emitWebViewLog(QString("Proxy Error ")  +" "+ QString(effectiveUrl));
+
+                }
+
+           }
+
+
+
+      }); // end of lambda
+    connect(curl, SIGNAL(done(CURLcode)), curl, SLOT(deleteLater()));
+
+
 }
-void WebView::view2HttpResponseFinished(QNetworkReply * reply)
+
+
+void WebView::view3Page(QString url)
 {
 
 
-    int httpStatusCode;
-    QUrl url(reply->url());
-    httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-
-    if(httpStatusCode <200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage2ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-    if(httpStatusCode ==200)
-    {
-        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
-        viewPage2ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    if(httpStatusCode> 200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage2ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    switch(reply->error())
-    {
-    case QNetworkReply::NoError:
-         // No error
-         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-         return;
-    case QNetworkReply::ContentNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Content Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
-                             +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::TimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::HostNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionClosedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")   +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyTimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    default:
-        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-}
-
-
-void WebView::view3Page(QWebPage *page){
     if(!proxyList3.isEmpty())
     {
-         proxyListRotater(proxyList3,page);
+         proxyListRotater(proxyList3);
     }
+    CurlEasy *curl = new CurlEasy;
+    std::string urlString = url.toStdString();
 
-    connect(this, &QWebView::loadFinished, [this,page](bool success) {
+    curl->set(CURLOPT_URL, urlString.c_str());
+    if (!proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, proxies->toStdString().c_str());
+    }
+    if (proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, NULL);
+    }
+    curl->set(CURLOPT_FOLLOWLOCATION, 1L); // Tells libcurl to follow HTTP 3xx redirects
+    curl->set(CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl->perform();
 
-    connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply *)),
-       this,SLOT(view3HttpResponseFinished(QNetworkReply *)));
+    curl->setWriteFunction([this](char *data, size_t size)->size_t {
 
 
+            //If response is not 200, obviously we wont get any emails,
+            // but were only going to parse emails, only
+            // so this means, we only get emails if::
+            //1 reponse code is 200
 
-        if (!success)
-        {
-           // qDebug() << "Could not load page view 3";
-        }
-       if(success) {
-          //  qDebug() << "Page loaded view 3";
+            // qDebug() << "Data from google.com: " << QByteArray(data, static_cast<int>(size));
+            QByteArray response(data, static_cast<int>(size));
+            QString responseString = QString(response);
+            QString plainText = QTextDocumentFragment::fromHtml(responseString).toPlainText();
+
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
-            QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
+
+            QRegularExpressionMatchIterator i = re.globalMatch(plainText);
             QRegularExpressionMatch match;
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
-           // mydb = QSqlDatabase::addDatabase("QSQLITE");
-          //  mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            QString dbFileName = getRelativePath("emails.db");
+            mydb.setDatabaseName(dbFileName);
             if(!mydb.open())
+           {
+               qDebug() << "Error connecting to database";
+
+           }else
+           {
+             qDebug() << "Successfully connected to database";
+           }
+           QSqlQuery qry;
+
+           while (i.hasNext()) {
+               QRegularExpressionMatch match = i.next();
+               if (!match.captured(0).isEmpty())
+                   word = match.captured(0);
+               if (!word.isEmpty()) {
+                   words << word;
+                   if (!words.value(num).isEmpty())
+
+                   {
+                       if(!qry.exec("insert into crawleremails(email) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawleremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                           qDebug() <<  "Successfully inserted crawler emails-->" << words.value(num);
+                       }
+                       if(!qry.exec("insert into crawlermaileremails(maileremails) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawlermaileremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                          // qDebug() <<  "Successfully inserted crawlermaileremails-->" << words.value(num);
+                       }
+
+                   }
+                   num++;
+
+               } // end words !empty
+
+           } // end while
+        // connClose();
+           mydb.removeDatabase(QSqlDatabase::database().connectionName());
+           mydb.close();
+
+
+            return size;
+    });// end setWriteFunction
+
+
+    connect(curl, &CurlEasy::done, [curl, this](CURLcode result) {
+            long httpResponseCode = curl->get<long>(CURLINFO_RESPONSE_CODE);
+
+            QString effectiveUrl = curl->get<const char*>(CURLINFO_EFFECTIVE_URL);
+
+            /*********HTTP CODE*******/
+            // Log errors,or show message to user if response code is not 200
+            if (httpResponseCode == 200 && result == CURLE_OK)
             {
-                qDebug() << "Error connecting to database";
-                return;
-            }else
-            {
-              qDebug() << "Successfully connected to database";
+
+                qDebug() << " Thread 3 HTTP  Code-->" << httpResponseCode;
+                qDebug() << "Result--->" << result;
+
+                harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
+                emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(effectiveUrl));
+
             }
-            QSqlQuery qry;
-            while (i.hasNext()) {
-                QRegularExpressionMatch match = i.next();
-                if (!match.captured(0).isEmpty())
-                    word = match.captured(0);
-                if (!word.isEmpty()) {
-                    words << word;
-                    if (!words.value(num).isEmpty())
 
-                    {
-                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
-                        {
-                            qDebug() << "Error inserting emails into database:: " <<
-                                        qry.lastError().text();
-                            return;
-                        }else
-                        {
-                            qDebug() <<  "Successfully inserted emails-->" << words.value(num);
-                        }
+            if (httpResponseCode == 503) {
 
+                qDebug() << "503 ERROR CODE ";
+                harvestStatus("HARVEST_HTTP_STATUS_ERROR");
+                emit emitWebViewLog(QString("HTTP Status: 503 Request Error")  +" "+ QString(effectiveUrl));
 
-//                       QSqlQuery query("SELECT * FROM crawleremails where email = '"+words.value(num)+"' " );
-//                       int fieldNo = query.record().indexOf("email");
-//                       int count =0;
-//                       while (query.next())
-//                       {
-//                           count++;
-//                          if(words.value(num) ==  query.value(fieldNo).toString())
-//                          {
-//                              qDebug() << "Duplicate exist";
-//                              return;
-//                          }else
-//                          {
-//                              if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
-//                              {
-//                                  qDebug() << "Error inserting emails into database";
-//                                  return;
-//                              }
-//                          }
+            }
 
-//                       }
+            if (result != CURLE_OK)
+            {
+
+                switch (result)
+                {
+                case 5: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Couldn't resolve proxy. The given proxy host could not be resolved." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 7: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
 
 
-                    }
-                    num++;
+                    emit emitWebViewLog( QString(" Failed to connect() to host or proxy.") +" "+ QString(effectiveUrl));
+                    break;
+                case 35: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("A problem occurred somewhere in the SSL/TLS handshake." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 56: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Failure with receiving network data." ) +" "+ QString(effectiveUrl));
+                    break;
 
-                } // end words !empty
 
-            } // end while
-          connClose();
-        }
+                default: qDebug() << "Default Switch Statement Curl Code--> " << result;
 
-   });
+                }
+                /**************
+                *checks curl erros codes
+                *
+                * 5 -- Couldn't resolve proxy. The given proxy host could not be resolved.
+                * 7 -- Failed to connect() to host or proxy.
+                *
+                *********/
+                if (result == 5 || result == 7 || result == 35)
+                {
+                    emit emitWebViewLog(QString("Proxy Error ")  +" "+ QString(effectiveUrl));
+
+                }
+
+           }
+
+
+
+      }); // end of lambda
+    connect(curl, SIGNAL(done(CURLcode)), curl, SLOT(deleteLater()));
+
+
 }
-void WebView::view3HttpResponseFinished(QNetworkReply * reply)
+
+void WebView::view4Page(QString url)
 {
-
-    int httpStatusCode;
-    QUrl url(reply->url());
-    httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-
-    if(httpStatusCode <200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage3ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-    if(httpStatusCode ==200)
-    {
-        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
-        viewPage3ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    if(httpStatusCode> 200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage3ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    switch(reply->error())
-    {
-    case QNetworkReply::NoError:
-         // No error
-         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-         return;
-    case QNetworkReply::ContentNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Content Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
-                             +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::TimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::HostNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionClosedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error") +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyTimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    default:
-        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-}
-
-void WebView::view4Page(QWebPage *page){
 
 
     if(!proxyList4.isEmpty())
     {
-         proxyListRotater(proxyList4,page);
+         proxyListRotater(proxyList4);
     }
-    connect(this, &QWebView::loadFinished, [this,page](bool success) {
+    CurlEasy *curl = new CurlEasy;
+    std::string urlString = url.toStdString();
 
-        connect(page->networkAccessManager(),SIGNAL(finished(QNetworkReply *)),
-                this,SLOT(view4HttpResponseFinished(QNetworkReply *)));
+    curl->set(CURLOPT_URL, urlString.c_str());
+    if (!proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, proxies->toStdString().c_str());
+    }
+    if (proxies->isEmpty()) {
+        curl->set(CURLOPT_PROXY, NULL);
+    }
+    curl->set(CURLOPT_FOLLOWLOCATION, 1L); // Tells libcurl to follow HTTP 3xx redirects
+    curl->set(CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl->perform();
 
-        if (!success)
-        {
-          //  qDebug() << "Could not load page view 4";
-        }
-       if(success) {
-         //   qDebug() << "Page loaded view 4";
+    curl->setWriteFunction([this](char *data, size_t size)->size_t {
+
+
+            //If response is not 200, obviously we wont get any emails,
+            // but were only going to parse emails, only
+            // so this means, we only get emails if::
+            //1 reponse code is 200
+
+            // qDebug() << "Data from google.com: " << QByteArray(data, static_cast<int>(size));
+            QByteArray response(data, static_cast<int>(size));
+            QString responseString = QString(response);
+            QString plainText = QTextDocumentFragment::fromHtml(responseString).toPlainText();
+
 
             QRegularExpression re("[0-9a-zA-Z]+([0-9a-zA-Z]*[-._+])*[0-9a-zA-Z]+@[0-9a-zA-Z]+([-.][0-9a-zA-Z]+)*([0-9a-zA-Z]*[.])[a-zA-Z]{2,6}");
-            QRegularExpressionMatchIterator i = re.globalMatch( page->mainFrame()->toPlainText());
+
+            QRegularExpressionMatchIterator i = re.globalMatch(plainText);
             QRegularExpressionMatch match;
             QStringList words;
             QString word;
             int num = 0;
-            connOpen();
-           // mydb = QSqlDatabase::addDatabase("QSQLITE");
-           // mydb.setDatabaseName("C:/Users/ace/Documents/QT_Projects/WebView/WebView/emailtest.db");
+
+            mydb = QSqlDatabase::addDatabase("QSQLITE");
+            QString dbFileName = getRelativePath("emails.db");
+            mydb.setDatabaseName(dbFileName);
             if(!mydb.open())
-            {
-                qDebug() << "Error connecting to database";
-                return;
-            }else
-            {
-              qDebug() << "Successfully connected to database";
-            }
-            QSqlQuery qry;
+           {
+               qDebug() << "Error connecting to database";
 
-            while (i.hasNext()) {
-                QRegularExpressionMatch match = i.next();
-                if (!match.captured(0).isEmpty())
-                    word = match.captured(0);
-                if (!word.isEmpty()) {
-                    words << word;
-                    if (!words.value(num).isEmpty())
+           }else
+           {
+             qDebug() << "Successfully connected to database";
+           }
+           QSqlQuery qry;
 
-                    {
-                        if(!qry.exec("insert or replace into crawleremails values('"+words.value(num)+"')"))
-                        {
-                            qDebug() << "Error inserting emails into database:: " <<
-                                        qry.lastError().text();
-                            return;
-                        }else
-                        {
-                            qDebug() <<  "Successfully inserted emails-->" << words.value(num);
-                        }
+           while (i.hasNext()) {
+               QRegularExpressionMatch match = i.next();
+               if (!match.captured(0).isEmpty())
+                   word = match.captured(0);
+               if (!word.isEmpty()) {
+                   words << word;
+                   if (!words.value(num).isEmpty())
 
-
-//                       QSqlQuery query("SELECT * FROM crawleremails where email = '"+words.value(num)+"' " );
-//                       int fieldNo = query.record().indexOf("email");
-//                       int count =0;
-//                       while (query.next())
-//                       {
-//                           count++;
-//                          if(words.value(num) ==  query.value(fieldNo).toString())
-//                          {
-//                              qDebug() << "Duplicate exist";
-//                              return;
-//                          }else
-//                          {
-//                              if(!qry.exec("insert into crawleremails values('"+words.value(num)+"')"))
-//                              {
-//                                  qDebug() << "Error inserting emails into database";
-//                                  return;
-//                              }
-//                          }
-
-//                       }
-
-
-                    }
-                    num++;
-
-                } // end words !empty
-
-            } // end while
-          connClose();
-        }
-
-   });
-}
-void WebView::view4HttpResponseFinished(QNetworkReply * reply)
-{
-    int httpStatusCode;
-    httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    QUrl url(reply->url());
-    emit emitWebViewLog(QString("HTTP Status: ") + QString(reply->errorString())
-                        +" "+ QString(url.host()+url.path()+url.query()));
-
-    if(httpStatusCode <200)
-    {
-
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage4ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)
-                            +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-    if(httpStatusCode ==200)
-    {
-        harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
-        viewPage4ProxyRotate = false;
-        emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    if(httpStatusCode> 200)
-    {
-        harvestStatus("HARVEST_HTTP_STATUS_ERROR");
-        viewPage4ProxyRotate = true;
-        emit emitWebViewLog(QString("HTTP Status: ") + QString::number(httpStatusCode)  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-    switch(reply->error())
-    {
-    case QNetworkReply::NoError:
-         // No error
-         emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(url.host()+url.path()+url.query()));
-         return;
-    case QNetworkReply::ContentNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Content Not Found"));
-        break;
-    case QNetworkReply::ConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: The remote server refused the connection (the server is not accepting requests")
-                             +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::TimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: The connection to the remote server timed out")
-                             +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::HostNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: The host was not found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyConnectionClosedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Connection Error"));
-        break;
-    case QNetworkReply::ProxyConnectionRefusedError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Refused Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyNotFoundError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Not Found")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    case QNetworkReply::ProxyTimeoutError:
-        emit emitWebViewLog(QString("HTTP Status: Proxy Timedout Error")  +" "+ QString(url.host()+url.path()+url.query()));
-        break;
-    default:
-        emit emitWebViewLog(QString("HTTP Status: Default Error: ") + QString(reply->errorString())  +" "+ QString(url.host()+url.path()+url.query()));
-    }
-
-}
-
-
-void WebView::pageLoaded(bool successLoaded)
-{
-    inLoading = false;
-    update();
-
-}
-
-//void WebView::setViewProxy(QString proxyHost,quint16 proxyPort)
-void WebView::setViewProxy(QNetworkProxy proxy)
-{
-    // QNetworkProxy proxy;
-     //proxy.setType(QNetworkProxy::Socks5Proxy);
-     // proxy.setUser("username");
-     // proxy.setPassword("password");
-     //proxy.setType(QNetworkProxy::HttpProxy);
-    // proxy.setHostName(proxyHost);
-     //proxy.setPort(proxyPort);
-     //QNetworkProxy::setApplicationProxy(proxy);
-     page()->networkAccessManager()->setProxy(proxy);
-}
-
-void WebView::setParams()
-{
-  // request->setUrl(url);
-  // request->setRawHeader("User-Agent",userAgent);
-    for(;;){
-        QEventLoop loop;
-        QTimer::singleShot(5000,&loop,SLOT(quit()));
-        loop.exec();
-        emit emitSenderTimer();
-
-    }
-}
-
-void WebView::insertEmailsJson()
-{
-   // qDebug() <<*emailList;
-
-       QTextStream readEmailStream(readEmailFile);
-         for(int  i =0; i < emailList->size(); i++)
-            {
-             //qDebug() <<emailList->value(i);
-               if(!readEmailStream.readLine().isEmpty())
-                {
-                   if(readEmailStream.readLine() != emailList->value(i))
                    {
-                      // qDebug() <<emailList->value(i);
-                      // readEmailStream << emailList->value(i);
-                   }else{
-                      // qDebug() << emailList->value(i);
+                       if(!qry.exec("insert into crawleremails(email) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawleremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                           qDebug() <<  "Successfully inserted crawler emails-->" << words.value(num);
+                       }
+                       if(!qry.exec("insert into crawlermaileremails(maileremails) values('"+words.value(num)+"')"))
+                       {
+                           qDebug() << "Error inserting crawlermaileremails into database:: " <<
+                                       qry.lastError().text();
+
+
+                       }else
+                       {
+                          // qDebug() <<  "Successfully inserted crawlermaileremails-->" << words.value(num);
+                       }
+
                    }
+                   num++;
+
+               } // end words !empty
+
+           } // end while
+        // connClose();
+           mydb.removeDatabase(QSqlDatabase::database().connectionName());
+           mydb.close();
+
+
+            return size;
+    });// end setWriteFunction
+
+
+    connect(curl, &CurlEasy::done, [curl, this](CURLcode result) {
+            long httpResponseCode = curl->get<long>(CURLINFO_RESPONSE_CODE);
+
+            QString effectiveUrl = curl->get<const char*>(CURLINFO_EFFECTIVE_URL);
+
+            /*********HTTP CODE*******/
+            // Log errors,or show message to user if response code is not 200
+            if (httpResponseCode == 200 && result == CURLE_OK)
+            {
+
+                qDebug() << " Thread 4 HTTP  Code-->" << httpResponseCode;
+                qDebug() << "Result--->" << result;
+
+                harvestStatus("HARVEST_SUCCESSFULLY_SCRAPING");
+                emit emitWebViewLog(QString("HTTP Status: 200 Request has succeeded")  +" "+ QString(effectiveUrl));
+
+            }
+
+            if (httpResponseCode == 503) {
+
+                qDebug() << "503 ERROR CODE ";
+                harvestStatus("HARVEST_HTTP_STATUS_ERROR");
+                emit emitWebViewLog(QString("HTTP Status: 503 Request Error")  +" "+ QString(effectiveUrl));
+
+            }
+
+            if (result != CURLE_OK)
+            {
+
+                switch (result)
+                {
+                case 5: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Couldn't resolve proxy. The given proxy host could not be resolved." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 7: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+
+
+                    emit emitWebViewLog( QString(" Failed to connect() to host or proxy.") +" "+ QString(effectiveUrl));
+                    break;
+                case 35: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("A problem occurred somewhere in the SSL/TLS handshake." ) +" "+ QString(effectiveUrl));
+                    break;
+                case 56: qDebug() << "Curl code-> " << result << " Message->" << curl->errbuf;
+                    emit emitWebViewLog( QString("Failure with receiving network data." ) +" "+ QString(effectiveUrl));
+                    break;
+
+                default: qDebug() << "Default Switch Statement Curl Code--> " << result;
+
+                }
+                /**************
+                *checks curl erros codes
+                *
+                * 5 -- Couldn't resolve proxy. The given proxy host could not be resolved.
+                * 7 -- Failed to connect() to host or proxy.
+                *
+                *********/
+                if (result == 5 || result == 7 || result == 35)
+                {
+                    emit emitWebViewLog(QString("Proxy Error ")  +" "+ QString(effectiveUrl));
+
                 }
 
+           }
 
-            }
+
+
+      }); // end of lambda
+    connect(curl, SIGNAL(done(CURLcode)), curl, SLOT(deleteLater()));
+
+
 
 
 }
+
+
+
+
+
 
 void WebView::connOpen()
 {
     mydb = QSqlDatabase::addDatabase("QSQLITE");
-    QString dbFileName = getRelativePath("emailtest.db");
-
+    QString dbFileName = getRelativePath("emails.db");
     mydb.setDatabaseName(dbFileName);
     if(!mydb.open())
     {
@@ -1139,7 +1007,25 @@ QString WebView::getRelativePath(QString fileName)
 //    tempCurrDir.cdUp();
 //    QString root = tempCurrDir.path();
 //    return root + "/" +fileName;
+//C:/Users/<USER>/AppData/Local/<APPNAME>
+    QString userName =  qgetenv("USERNAME");
+    QString crawlerAppDataResourcesDir =  QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+    QString dir = "C:/Users/" + userName+"/AppData/Local/BeatCrawler/resources/";
+    QDir resourcesDir(dir);
+    QStringList args;
+    if(RESOURCES_DIR == "RELEASE")
+    {
 
-    return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
+        if(resourcesDir.exists())
+        {
+            return resourcesDir.path() + "/" +fileName;
+        }
+
+    }else
+    {
+        return "C:/Users/ace/Documents/QT_Projects/WebView/build-WebView-Desktop_Qt_5_9_4_MSVC2015_32bit2-Release/release/" + fileName;
+
+    }
 
 }

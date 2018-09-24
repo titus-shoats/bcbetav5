@@ -18,6 +18,11 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include "worker.h"
+#include "config.h"
+#include <QStandardPaths>
+#include <QDir>
+#include "curleasy.h"
+
 
 class WebView : public QWebView
 {
@@ -25,18 +30,14 @@ class WebView : public QWebView
 public:
    WebView(QWidget *parent = 0);
    ~WebView();
-   void setViewProxy(QNetworkProxy proxy);
-   void setParams();
-   void openEmailListFile(QFile * emailListFile);
-   void readEmailListFile(QFile * readEmailFile) const;
-   void view1Page(QWebPage *page);
-   void view2Page(QWebPage *page);
-   void view3Page(QWebPage *page);
-   void view4Page(QWebPage *page);
+   void view1Page(QString url);
+   void view2Page(QString url);
+   void view3Page(QString url);
+   void view4Page(QString url);
    void connOpen();
    void connClose();
-   void proxyListRotater(QStringList proxyServersList,QWebPage *page);
-   void initProxyListSettings();
+   void proxyListRotater(QStringList proxyServersList);
+   void initSettings();
    void harvestStatus(QString status);
    QString getRelativePath(QString fileName);
 
@@ -44,23 +45,7 @@ public:
 protected:
     void paintEvent(QPaintEvent *event);
 
-private slots:
-    void newPageLoading();
-    void pageLoaded(bool ok);
-public slots:
-    void insertEmailsJson();
-    void view1HttpResponseFinished(QNetworkReply * reply);
-    void view2HttpResponseFinished(QNetworkReply * reply);
-    void view3HttpResponseFinished(QNetworkReply * reply);
-    void view4HttpResponseFinished(QNetworkReply * reply);
-
 private:
-    QTime loadingTime;
-    bool inLoading;
-    QFile * emailListFile;
-    bool finishLoading;
-    QStringList *emailList;
-    QFile * readEmailFile;
     QSqlDatabase mydb;
     QStringList logMessage;
     int *httpStatusPtr;
@@ -86,6 +71,7 @@ private:
     bool canProxyCounterIncrement;
     bool isMultiURLSelected;
     QString *replyUrl;
+    QString excludeEmailDuplicates;
 
 signals:
     void emitSenderTimer();

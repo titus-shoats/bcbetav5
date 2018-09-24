@@ -8,7 +8,7 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),view1(new WebView()),
+    ui(new Ui::MainWindow),
     view2(new WebView()),view3(new WebView()),view4(new WebView()),
     request1(new QNetworkRequest()),request2(new QNetworkRequest()),
     request3(new QNetworkRequest()), request4(new QNetworkRequest()),timer(new QTimer()),
@@ -27,33 +27,18 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(worker,SIGNAL(emitMultiLoopWebViewParams(QString,QString,QString,QString)),
             this,SLOT(receiverMultiLoopWebViewParams(QString,QString ,QString,QString)));
 
-    view1->setGeometry(0,80,600,600);
-    view1->setAttribute(Qt::WA_DeleteOnClose);
-    view1->settings()->setAttribute(QWebSettings::JavascriptEnabled,false);
-
-    view2->setGeometry(0,80,600,600);
-    view2->setAttribute(Qt::WA_DeleteOnClose);
-    view2->settings()->setAttribute(QWebSettings::JavascriptEnabled,false);
-
-    view3->setGeometry(0,80,600,600);
-    view3->setAttribute(Qt::WA_DeleteOnClose);
-    view3->settings()->setAttribute(QWebSettings::JavascriptEnabled,false);
-
-    view4->setGeometry(0,80,600,600);
-    view4->setAttribute(Qt::WA_DeleteOnClose);
-    view4->settings()->setAttribute(QWebSettings::JavascriptEnabled,false);
 
     worker->initHarvest();
 
     //connect(timer,&QTimer::timeout,webview,&WebView::insertEmailsJson);
     //timer->start(5000);
 
+
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-    delete view1;
     delete view2;
     delete view3;
     delete view4;
@@ -71,50 +56,50 @@ MainWindow::~MainWindow()
 void MainWindow::receiverLoopWebViewParams(QString searchEngineParam)
 {
 
-    // const QUrl url1("https://www.google.com/search?q=whats+my+ip&oq=whats+my+ip&aqs=chrome.0.35i39j0l5.3021j0j7&sourceid=chrome&ie=UTF-8");
-    const QUrl url1(searchEngineParam);
-    request1->setUrl(url1);
-    view1->load(*request1);
-    view1->view1Page(view1->page());
-   // view1->show();
-   // qDebug() << searchEngineParam;
+  //  QFuture<void> future1;
+  //  future1 = QtConcurrent::run(this,&MainWindow::runThread1,searchEngineParam);
+
+
+ //  view1.view1Page("https://www.bing.com/search?q=site%3ainstagram.com+%22%40gmail.com%22+%22my+music%22&qs=n&sp=-1&pq=site%3ainstagram.com+%22%40gmail.com%22+%22my+music%22&sc=1-42&sk=&cvid=86346455A4764D3C84738BC8701E5CED&first=11&FORM=PERE");
+  // qDebug() << searchEngineParam;
+    view1.view1Page(searchEngineParam);
+}
+void MainWindow::runThread1(QString url)
+{
+
 }
 void MainWindow::receiverMultiLoopWebViewParams(QString searchEngineParamMulti1,QString searchEngineParamMulti2,
                                                 QString searchEngineParamMulti3,QString searchEngineParamMulti4)
 {
 
-//     qDebug() << "Multi 1 " << searchEngineParamMulti1;
+     //qDebug() << "Multi 1 " << searchEngineParamMulti1;
 //     qDebug() << "Multi 2 "<<  searchEngineParamMulti2;
 //     qDebug() << "Multi 3 "<<  searchEngineParamMulti3;
 //     qDebug() << "Multi 4 "<<  searchEngineParamMulti4;
 
-    const QUrl url1(searchEngineParamMulti1);
-    const QUrl url2(searchEngineParamMulti2);
-   // const QUrl url3(searchEngineParamMulti3);
-   // const QUrl url4(searchEngineParamMulti4);
 
-    request1->setUrl(url1);
-    request2->setUrl(url2);
-   // request3->setUrl(url3);
-   // request4->setUrl(url4);
+    mutex.lock();
+   // view1.view1Page("https://www.bing.com/search?q=site%3ainstagram.com+%22%40gmail.com%22+%22my+music%22&qs=n&sp=-1&pq=site%3ainstagram.com+%22%40gmail.com%22+%22my+music%22&sc=1-42&sk=&cvid=86346455A4764D3C84738BC8701E5CED&first=11&FORM=PERE");
+    view1.view1Page(searchEngineParamMulti1);
+    mutex.unlock();
 
-
-    view1->load(*request1);
-    view2->load(*request2);
-    //view3->load(*request3);
-   // view4->load(*request4);
+    mutex.lock();
+   // view2->view2Page("https://www.bing.com/search?q=site%3Ainstagram.com%20%22%40gmail.com%22%20%22beats%20for%20sale%22&qs=n&form=QBRE&sp=-1&pq=site%3Ainstagram.com%20%22%40gmail.com%22%20%22beats%20for%20sale%22&sc=1-48&sk=&cvid=BE31A20458124FEFA6B350BD5330F6AE");
+    view2->view2Page(searchEngineParamMulti2);
+    mutex.unlock();
 
 
-    view1->view1Page(view1->page());
-    view2->view2Page(view2->page());
-   // view3->view3Page(view3->page());
-   // view4->view4Page(view4->page());
+    mutex.lock();
+    //view3->view3Page("https://www.google.com/search?ei=6dynW9jLLuGijwT42YPYBQ&q=site%3Ainstagram.com+%22%40yahoo.com%22+%22beats+for+sale%22&oq=site%3Ainstagram.com+%22%40yahoo.com%22+%22beats+for+sale%22&gs_l=psy-ab.3...2458.5735..6310...0.0..0.151.881.0j7......0....1..gws-wiz.JxW8nRarn3o");
+    view3->view3Page(searchEngineParamMulti3);
+    mutex.unlock();
+
+    mutex.lock();
+    //view4->view4Page("https://www.google.com/search?ei=8tynW6CzF4OzjwScj4-AAw&q=site%3Ainstagram.com+%22%40yahoo.com%22+%22need+beats%22&oq=site%3Ainstagram.com+%22%40yahoo.com%22+%22need+beats%22&gs_l=psy-ab.3...19173.20746..21249...0.0..0.154.1198.3j7......0....1..gws-wiz.DdgurK6_RLc");
+    view4->view4Page(searchEngineParamMulti4);
+    mutex.unlock();
 
 
-   // view1->show();
-   // view2->show();
-   // view3->show();
-  // view4->show();
 }
 
 void MainWindow::getThread(){

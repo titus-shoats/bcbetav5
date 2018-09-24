@@ -46,6 +46,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QVector>
+#include "config.h"
+#include <QStandardPaths>
+#include <QDir>
 
 
 class Worker : public QObject

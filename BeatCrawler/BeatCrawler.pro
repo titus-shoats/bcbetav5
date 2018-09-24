@@ -26,14 +26,16 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     worker.cpp \
-    queuekeywords.cpp
+    queuekeywords.cpp \
+    smtp.cpp
 
 HEADERS += \
         mainwindow.h \
     options.h \
     worker.h \
     queuekeywords.h \
-    config.h
+    config.h \
+    smtp.h
 
 FORMS += \
         mainwindow.ui \

@@ -16,7 +16,10 @@
 #include <QSqlQuery>
 #include <QSqlQueryModel>
 #include <QLocalSocket>
-#include <config.h>
+#include "config.h"
+#include <QStandardPaths>
+#include <QDir>
+
 
 
 

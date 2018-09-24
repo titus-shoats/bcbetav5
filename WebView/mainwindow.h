@@ -10,6 +10,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 #include <QMessageBox>
+#include <QMutex>
 
 
 namespace Ui {
@@ -24,11 +25,12 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     void getRequest();
+    void runThread1(QString url);
 
 
 private:
     Ui::MainWindow *ui;
-    WebView *view1;
+    WebView view1;
     WebView *view2;
     WebView *view3;
     WebView *view4;
@@ -40,6 +42,7 @@ private:
     QNetworkRequest *request4;
     QTimer *timer;
     Worker *worker;
+    QMutex mutex;
 
 public slots:
     void getThread();

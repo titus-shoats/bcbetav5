@@ -50,14 +50,14 @@
    <widget class="QLabel" name="label_search_engine">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>10</y>
       <width>101</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>Parse Options</string>
+     <string>Beat Crawler Options</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_search_engine_keywords">
@@ -109,7 +109,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>6</number>
     </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
@@ -702,8 +702,8 @@
          <rect>
           <x>160</x>
           <y>0</y>
-          <width>181</width>
-          <height>101</height>
+          <width>211</width>
+          <height>91</height>
          </rect>
         </property>
         <property name="title">
@@ -747,12 +747,12 @@
           <rect>
            <x>10</x>
            <y>30</y>
-           <width>161</width>
+           <width>191</width>
            <height>16</height>
           </rect>
          </property>
          <property name="text">
-          <string>Parse  URL During Harvest</string>
+          <string>Parse  Single URL During Harvest</string>
          </property>
          <property name="checked">
           <bool>true</bool>
@@ -763,9 +763,9 @@
         <property name="geometry">
          <rect>
           <x>160</x>
-          <y>100</y>
+          <y>90</y>
           <width>181</width>
-          <height>91</height>
+          <height>101</height>
          </rect>
         </property>
         <property name="title">
@@ -774,7 +774,7 @@
         <widget class="QRadioButton" name="radioButton_Default_Search_Results">
          <property name="geometry">
           <rect>
-           <x>20</x>
+           <x>10</x>
            <y>30</y>
            <width>121</width>
            <height>17</height>
@@ -790,7 +790,7 @@
         <widget class="QRadioButton" name="radioButton_Bypass_Search_Results">
          <property name="geometry">
           <rect>
-           <x>20</x>
+           <x>10</x>
            <y>60</y>
            <width>141</width>
            <height>17</height>
@@ -798,6 +798,32 @@
          </property>
          <property name="text">
           <string>Bypass Search Results </string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QGroupBox" name="groupBox_5">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>140</y>
+          <width>131</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string>Email Duplicates</string>
+        </property>
+        <widget class="QCheckBox" name="checkBox_Exclude_Email_Duplicates">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>30</y>
+           <width>111</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Remove Duplicates</string>
          </property>
         </widget>
        </widget>
@@ -891,6 +917,369 @@
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="tab_9">
+     <attribute name="title">
+      <string>Mailer</string>
+     </attribute>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>611</width>
+        <height>231</height>
+       </rect>
+      </property>
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="tab_10">
+       <attribute name="title">
+        <string>Email Message(s)</string>
+       </attribute>
+       <widget class="QLabel" name="label_5">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>40</y>
+          <width>31</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Text</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_4">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>47</width>
+          <height>13</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Subject</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Mailer_Subject">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>10</y>
+          <width>281</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QPlainTextEdit" name="plainTextEdit_Mailer_Body">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>40</y>
+          <width>511</width>
+          <height>131</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_16">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>180</y>
+          <width>41</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Spintax:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_17">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>180</y>
+          <width>71</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>{word|word}</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="tab_12">
+       <attribute name="title">
+        <string>Email Options</string>
+       </attribute>
+       <widget class="QLabel" name="label_6">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>20</y>
+          <width>81</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Your own Email</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Mailer_Email_Provider">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>20</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Mailer_SMTP_Server">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>50</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>50</y>
+          <width>81</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>SMTP-Server</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="spinBox_Mailer_SMTP_Port">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>50</y>
+          <width>51</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+        <property name="value">
+         <number>25</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_9">
+        <property name="geometry">
+         <rect>
+          <x>270</x>
+          <y>50</y>
+          <width>21</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Port</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Mailer_Login">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>80</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_10">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>80</y>
+          <width>81</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Login</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_11">
+        <property name="geometry">
+         <rect>
+          <x>270</x>
+          <y>80</y>
+          <width>81</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Password</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Mailer_Password">
+        <property name="geometry">
+         <rect>
+          <x>320</x>
+          <y>80</y>
+          <width>121</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_Mailer_Test">
+        <property name="geometry">
+         <rect>
+          <x>460</x>
+          <y>80</y>
+          <width>80</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Test</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_Mailer_Timer_Delayed">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>110</y>
+          <width>91</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Send delayed</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="spinBox_Mailer_Timer_Delayed_Seconds">
+        <property name="geometry">
+         <rect>
+          <x>130</x>
+          <y>110</y>
+          <width>43</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="minimum">
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>5</number>
+        </property>
+        <property name="displayIntegerBase">
+         <number>10</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_12">
+        <property name="geometry">
+         <rect>
+          <x>180</x>
+          <y>110</y>
+          <width>61</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>seconds</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_Enable_AutoMailer">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>130</y>
+          <width>131</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Enable Auto Mailer</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>270</x>
+          <y>20</y>
+          <width>321</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>(Should belong to smtp account, Replies will go to this address)</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_14">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>360</x>
+          <y>50</y>
+          <width>201</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>(Default port is 25 for each smtp-server)</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="tab_13">
+       <attribute name="title">
+        <string>Mailer Log</string>
+       </attribute>
+       <widget class="QListWidget" name="listWidget_Mailer_Log">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>581</width>
+          <height>181</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="preview_Mailer_Message">
+       <attribute name="title">
+        <string>Preview Message</string>
+       </attribute>
+       <widget class="QTextBrowser" name="textBrowser_Preview_Mailer_Message">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>591</width>
+          <height>181</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </widget>
     <widget class="QWidget" name="tab_11">
      <attribute name="title">
       <string>Log</string>
@@ -917,6 +1306,122 @@
       <property name="text">
        <string>Harvester Log Status</string>
       </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_14">
+     <attribute name="title">
+      <string>License</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_Register_License">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>491</width>
+        <height>191</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Register License</string>
+      </property>
+      <widget class="QLabel" name="label_Items_Found_4">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>131</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>License Version: 1.0.9</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_Buy_License">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>130</y>
+         <width>91</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Buy Full Version</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit_Enter_License_Serial">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>60</y>
+         <width>281</width>
+         <height>21</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_Enter_Serial">
+       <property name="geometry">
+        <rect>
+         <x>390</x>
+         <y>60</y>
+         <width>80</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Validate Serial</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_15">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>60</y>
+         <width>71</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Enter Serial</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit_Enter_License_Email">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>90</y>
+         <width>121</width>
+         <height>21</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_18">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>90</y>
+         <width>71</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Enter Email</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_licensedUser">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>160</y>
+         <width>241</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Demo Version</string>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>
@@ -964,7 +1469,7 @@
      <rect>
       <x>10</x>
       <y>410</y>
-      <width>291</width>
+      <width>281</width>
       <height>21</height>
      </rect>
     </property>
@@ -977,12 +1482,12 @@
      <rect>
       <x>303</x>
       <y>410</y>
-      <width>291</width>
+      <width>141</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Items Found:</string>
+     <string>Unique Items Found:</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="lineEdit_Keyword_List_File_Location">
@@ -1002,6 +1507,32 @@
     </property>
     <property name="placeholderText">
      <string>Keyword List Directory</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_Email_Sent_SMTP">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>410</y>
+      <width>161</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_Status_Software_Version">
+    <property name="geometry">
+     <rect>
+      <x>460</x>
+      <y>410</y>
+      <width>131</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>License Version: 1.0.9</string>
     </property>
    </widget>
   </widget>
